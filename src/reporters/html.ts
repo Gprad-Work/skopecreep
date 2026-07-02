@@ -109,6 +109,22 @@ a{color:var(--low)}
 .foot .lg{display:inline-flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.08em}
 .foot .lg .dot{width:9px;height:9px;border-radius:1px;background:var(--c)}
 
+/* severity distribution bar */
+.sevbar{display:flex;height:7px;border-radius:2px;overflow:hidden;margin:16px 0 0;
+  background:#3a352c;box-shadow:0 0 0 1px #3a352c}
+.sevbar span{display:block;height:100%;min-width:2px}
+.sevbar .sev-critical{background:var(--crit)} .sevbar .sev-high{background:var(--high)}
+.sevbar .sev-medium{background:var(--med)} .sevbar .sev-low{background:var(--low)}
+.sevbar .sev-info{background:var(--info)}
+
+/* per-severity band divider inside the findings list */
+.sev-band{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+  display:flex;align-items:center;gap:9px;margin:30px 0 12px;color:var(--c,var(--ink-2))}
+.sev-band:first-child{margin-top:2px}
+.sev-band .dot{width:7px;height:7px;border-radius:1px;background:var(--c,var(--ink-2));flex:0 0 auto}
+.sev-band .n{color:var(--ink);font-weight:700;font-size:.72rem}
+.sev-band::after{content:"";flex:1;height:1px;background:var(--rule)}
+
 .finding{animation:rise .4s ease both}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 :focus-visible{outline:2px solid var(--low);outline-offset:2px}
@@ -164,6 +180,32 @@ function renderFinding(f: Finding): string {
   </article>`;
 }
 
+/** A slim proportional bar showing the shape of the severity mix at a glance. */
+function sevBar(counts: Record<Severity, number>, total: number): string {
+  if (total === 0) return "";
+  const present = SEVERITY_ORDER.filter((s) => counts[s] > 0);
+  const segs = present
+    .map((s) => `<span class="sev-${s}" style="width:${((counts[s] / total) * 100).toFixed(2)}%"></span>`)
+    .join("");
+  const label = present.map((s) => `${counts[s]} ${SEV_LABEL[s]}`).join(", ");
+  return `<div class="sevbar" role="img" aria-label="Severity distribution: ${esc(label)}">${segs}</div>`;
+}
+
+/** Findings arrive severity-sorted, but group explicitly rather than assume it —
+ * a triage-first read (worst first, banded) is the point of a security report. */
+function renderFindingsGrouped(findings: Finding[], counts: Record<Severity, number>): string {
+  const out: string[] = [];
+  for (const s of SEVERITY_ORDER) {
+    const group = findings.filter((f) => f.severity === s);
+    if (group.length === 0) continue;
+    out.push(
+      `<h3 class="sev-band sev-${s}"><span class="dot"></span>${esc(SEV_LABEL[s])} <span class="n">${counts[s]}</span></h3>`,
+    );
+    out.push(group.map(renderFinding).join(""));
+  }
+  return out.join("");
+}
+
 /** Body markup + a leading <style>. Suitable for embedding (e.g. an Artifact). */
 export function renderHtmlContent(report: AuditReport, opts: HtmlOptions): string {
   const counts = countBySeverity(opts.findings);
@@ -187,7 +229,7 @@ export function renderHtmlContent(report: AuditReport, opts: HtmlOptions): strin
 
   const findingsBlock =
     total > 0
-      ? opts.findings.map(renderFinding).join("")
+      ? renderFindingsGrouped(opts.findings, counts)
       : `<p class="clean">Nothing to report at or above <b>${esc(opts.minSeverity)}</b> severity. Lower <code>--min-severity</code> to see informational items.</p>`;
 
   const notes =
@@ -205,6 +247,7 @@ export function renderHtmlContent(report: AuditReport, opts: HtmlOptions): strin
   <p class="dossier">AI Tooling Scope Audit · ${esc(report.host.platform)} · ${esc(report.generatedAt)}</p>
   <p class="thesis">Everything your AI coding tools can do, and everything they've been told — with the risky configuration ranked and explained. Secrets are always redacted.</p>
   <div class="tally">${tallyBlock}${suppressed}</div>
+  ${sevBar(counts, total)}
 </div></div>
 <div class="wrap">
   <h2 class="eyebrow">Tools detected</h2>
