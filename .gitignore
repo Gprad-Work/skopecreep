@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+coverage/
+# Personal Claude Code session permissions — not project config, never shared.
+.claude/settings.local.json
+# Never commit real audit output — reports contain local paths and config details.
+*.scopeaudit.json
+scopeaudit-report.*
+report.*
+*.html
