@@ -86,7 +86,7 @@ skopecreep
 npx skopecreep scan --fail-on high
 ```
 
-Requires Node.js >= 18. `skopecreep` only reads local files — it never sends
+Requires Node.js >= 20. `skopecreep` only reads local files — it never sends
 anything over the network.
 
 ## skopecreep vs mcp-scan

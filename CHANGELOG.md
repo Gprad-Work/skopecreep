@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Secret fingerprinting and `redact-check` self-test — never prints a raw
   secret value
 - Baseline support and `--fail-on` for CI gating
-- GitHub Actions CI matrix (Node 18/20/22 × ubuntu/macos/windows)
+- GitHub Actions CI matrix (Node 20/22/24 × ubuntu/macos/windows)
 - Per-detector unit test suite alongside the integration fixture suite
 
 ### Notes
