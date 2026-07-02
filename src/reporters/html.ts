@@ -125,6 +125,34 @@ a{color:var(--low)}
 .sev-band .n{color:var(--ink);font-weight:700;font-size:.72rem}
 .sev-band::after{content:"";flex:1;height:1px;background:var(--rule)}
 
+/* tabs */
+.tabs{display:flex;border-bottom:1px solid var(--rule);margin:32px 0 0}
+.tab{font-family:var(--mono);font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;
+  background:none;border:none;border-bottom:2px solid transparent;color:var(--ink-2);
+  padding:10px 4px;margin-bottom:-1px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.tab+.tab{margin-left:22px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink);font-weight:700}
+.tab:hover{color:var(--ink)}
+.tab:focus-visible{outline:2px solid var(--low);outline-offset:2px}
+.tab-n{font-size:.66rem;background:var(--ink-2);color:var(--paper);padding:1px 6px;border-radius:8px}
+.tab[aria-selected="true"] .tab-n{background:var(--ink)}
+[role="tabpanel"]{margin-top:22px}
+[role="tabpanel"][hidden]{display:none}
+@media print{.tabs{display:none}[role="tabpanel"][hidden]{display:block!important}}
+
+/* MCP server ledger (inventory tab) */
+.mcp-list{display:flex;flex-direction:column;gap:1px;background:var(--rule);border:1px solid var(--rule);
+  border-radius:3px;overflow:hidden;margin-top:14px}
+.mcp-row{display:flex;align-items:center;gap:12px;background:var(--panel);padding:10px 15px;
+  flex-wrap:wrap;font-family:var(--mono);font-size:.78rem}
+.mcp-row .name{font-weight:600}
+.mcp-row .transport{color:var(--ink-2);text-transform:uppercase;font-size:.68rem;letter-spacing:.08em}
+.mcp-row .target{color:var(--ink-2);flex:1;min-width:140px;overflow-wrap:anywhere}
+.mcp-flag{font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:2px 6px;border-radius:2px;color:#fff}
+.mcp-flag.warn{background:var(--med)}
+.mcp-flag.danger{background:var(--crit)}
+
 .finding{animation:rise .4s ease both}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 :focus-visible{outline:2px solid var(--low);outline-offset:2px}
@@ -191,6 +219,26 @@ function sevBar(counts: Record<Severity, number>, total: number): string {
   return `<div class="sevbar" role="img" aria-label="Severity distribution: ${esc(label)}">${segs}</div>`;
 }
 
+/** MCP server ledger — the same data as `skopecreep list-mcp`, folded into the inventory tab. */
+function renderMcpBlock(report: AuditReport): string {
+  const servers = report.inventory.mcpServers;
+  if (servers.length === 0) return "";
+  const rows = [...servers]
+    .sort((a, b) => a.tool.localeCompare(b.tool) || a.name.localeCompare(b.name))
+    .map((s) => {
+      const target = s.transport === "stdio" ? `${s.command ?? ""} ${(s.args ?? []).join(" ")}`.trim() : (s.url ?? "");
+      const flags = [
+        s.pinned === false ? '<span class="mcp-flag warn">unpinned</span>' : "",
+        s.hasSecretInEnv ? '<span class="mcp-flag danger">secret in env</span>' : "",
+      ]
+        .filter(Boolean)
+        .join("");
+      return `<div class="mcp-row"><span class="name">${esc(s.tool)}/${esc(s.name)}</span><span class="transport">${esc(s.transport)}</span><span class="target">${esc(target)}</span>${flags}</div>`;
+    })
+    .join("");
+  return `<h2 class="eyebrow">MCP servers</h2><div class="mcp-list">${rows}</div>`;
+}
+
 /** Findings arrive severity-sorted, but group explicitly rather than assume it —
  * a triage-first read (worst first, banded) is the point of a security report. */
 function renderFindingsGrouped(findings: Finding[], counts: Record<Severity, number>): string {
@@ -241,28 +289,63 @@ export function renderHtmlContent(report: AuditReport, opts: HtmlOptions): strin
     .map((s) => `<span class="lg sev-${s}"><span class="dot"></span>${esc(SEV_LABEL[s])}</span>`)
     .join("");
 
+  const mcpBlock = renderMcpBlock(report);
+
   return `<style>${HTML_CSS}</style>
 <div class="masthead"><div class="mast-inner">
   <div class="brand">skopecreep <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span></div>
   <p class="dossier">AI Tooling Scope Audit · ${esc(report.host.platform)} · ${esc(report.generatedAt)}</p>
-  <p class="thesis">Everything your AI coding tools can do, and everything they've been told — with the risky configuration ranked and explained. Secrets are always redacted.</p>
+  <p class="thesis">Local configuration for every AI coding tool detected on this machine, ranked by risk. Secrets below are shown only as redacted fingerprints.</p>
   <div class="tally">${tallyBlock}${suppressed}</div>
   ${sevBar(counts, total)}
 </div></div>
 <div class="wrap">
-  <h2 class="eyebrow">Tools detected</h2>
-  <div class="tools">${toolRows}</div>
+  <div class="tabs" role="tablist" aria-label="Report sections">
+    <button type="button" class="tab" id="tab-findings" role="tab" aria-selected="true" aria-controls="panel-findings" tabindex="0">Findings${total > 0 ? ` <span class="tab-n">${total}</span>` : ""}</button>
+    <button type="button" class="tab" id="tab-inventory" role="tab" aria-selected="false" aria-controls="panel-inventory" tabindex="-1">Inventory</button>
+  </div>
 
-  <h2 class="eyebrow">Findings${total > 0 ? ` — ${total}` : ""}</h2>
-  ${findingsBlock}
-  ${notes}
+  <div id="panel-findings" role="tabpanel" aria-labelledby="tab-findings">
+    ${findingsBlock}
+    ${notes}
+  </div>
+  <div id="panel-inventory" role="tabpanel" aria-labelledby="tab-inventory" hidden>
+    <h2 class="eyebrow">Tools detected</h2>
+    <div class="tools">${toolRows}</div>
+    ${mcpBlock}
+  </div>
 
   <footer class="foot">
     <div class="legend">${legend}</div>
     Severity = impact × (exposure + exploitability). Redaction bars mark values shown only as a fingerprint — never the secret itself.<br>
     Generated by skopecreep · read-only · report data stays on your machine.
   </footer>
-</div>`;
+</div>
+<script>(function(){
+  var tabs=[].slice.call(document.querySelectorAll('.tab'));
+  if(!tabs.length)return;
+  var panels={};
+  tabs.forEach(function(t){panels[t.id]=document.getElementById(t.getAttribute('aria-controls'))});
+  function select(id){
+    tabs.forEach(function(t){
+      var on=t.id===id;
+      t.setAttribute('aria-selected',String(on));
+      t.tabIndex=on?0:-1;
+      panels[t.id].hidden=!on;
+    });
+  }
+  tabs.forEach(function(t,i){
+    t.addEventListener('click',function(){select(t.id)});
+    t.addEventListener('keydown',function(e){
+      if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;
+      var dir=e.key==='ArrowRight'?1:-1;
+      var next=tabs[(i+dir+tabs.length)%tabs.length];
+      select(next.id);
+      next.focus();
+      e.preventDefault();
+    });
+  });
+})();</script>`;
 }
 
 /** Full standalone HTML document (for `--out report.html`). */
