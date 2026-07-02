@@ -1,5 +1,9 @@
 # skopecreep
 
+[![CI](https://github.com/Gprad-Work/skopecreep/actions/workflows/ci.yml/badge.svg)](https://github.com/Gprad-Work/skopecreep/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/skopecreep.svg)](https://www.npmjs.com/package/skopecreep)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
 > Catch the scope creep in your AI coding agents — audit what they're actually allowed to do, and what they've been told.
 
 `skopecreep` inventories the configuration and granted scope of the AI coding

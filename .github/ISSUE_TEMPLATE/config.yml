@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Gprad-Work/skopecreep/security/advisories/new
+    about: Please don't file security issues as public GitHub issues — use private vulnerability reporting instead. See SECURITY.md.
