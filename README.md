@@ -1,8 +1,6 @@
 # skopecreep
 
 
-[![npm](https://img.shields.io/npm/v/skopecreep.svg)](https://www.npmjs.com/package/skopecreep)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 A read-only CLI that audits the configuration and granted scope of your AI
 coding agents — Claude Code, Codex CLI, Cursor, Windsurf, Copilot, and generic
