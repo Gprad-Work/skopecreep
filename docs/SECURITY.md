@@ -4,7 +4,7 @@
 
 If you find a security issue in `skopecreep` — including a secret-leak path, a way to trigger code execution while parsing a malicious config, or a detector that's trivially bypassable — please **do not open a public GitHub issue**.
 
-Instead, use **GitHub private vulnerability reporting** — click the "Report a vulnerability" button on the [Security tab](../../security/advisories/new) of this repo.
+Instead, use **GitHub private vulnerability reporting** — click the "Report a vulnerability" button on the [Security tab](https://github.com/Gprad-Work/skopecreep/security/advisories/new) of this repo.
 
 Please include:
 - A description of the issue

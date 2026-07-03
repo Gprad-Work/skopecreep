@@ -16,6 +16,6 @@ labels: enhancement
 - What would you want flagged first — permissions, MCP servers, secrets,
   hooks, something else?
 
-See `CONTRIBUTING.md` — "1 collector = 1 tool, 1 detector = 1 check" — most
+See `docs/CONTRIBUTING.md` — "1 collector = 1 tool, 1 detector = 1 check" — most
 feature requests map directly onto adding one of these two things, and PRs
 are very welcome.

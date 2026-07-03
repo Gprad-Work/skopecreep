@@ -24,4 +24,4 @@ pattern this project uses.
 If this is a **security issue** (a secret leaking into output, code execution
 from a malicious config, a trivially bypassable detector) — please don't file
 it here. Use GitHub's private vulnerability reporting instead, see
-[SECURITY.md](../../SECURITY.md).
+[docs/SECURITY.md](../../docs/SECURITY.md).
