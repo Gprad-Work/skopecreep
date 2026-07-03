@@ -1,6 +1,6 @@
 **What this changes**
 
-**Which of the two it is** (per `CONTRIBUTING.md` — "1 collector = 1 tool, 1
+**Which of the two it is** (per `docs/CONTRIBUTING.md` — "1 collector = 1 tool, 1
 detector = 1 check"):
 - [ ] New/updated collector
 - [ ] New/updated detector
