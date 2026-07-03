@@ -4,20 +4,29 @@
 [![npm](https://img.shields.io/npm/v/skopecreep.svg)](https://www.npmjs.com/package/skopecreep)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-> Catch the scope creep in your AI coding agents — audit what they're actually allowed to do, and what they've been told.
-
-`skopecreep` inventories the configuration and granted scope of the AI coding
-agents on your machine (Claude Code, OpenAI Codex CLI, Cursor, Windsurf, GitHub
-Copilot, and generic `AGENTS.md` / `.mcp.json`) and flags risky configuration:
-MCP servers that auto-execute code, over-broad permission and trust grants,
-lifecycle hooks, plaintext credentials on disk, and instruction/memory files
-that silently steer the agent (a prompt-injection surface).
-
-It is **read-only**, runs locally, and **never prints a secret value**.
+A read-only CLI that audits the configuration and granted scope of your AI
+coding agents — Claude Code, Codex CLI, Cursor, Windsurf, Copilot, and generic
+`AGENTS.md`/`.mcp.json` setups — flagging auto-executing MCP servers,
+over-broad permissions, lifecycle hooks, plaintext secrets, and
+prompt-injection surface in context files. Runs locally, never prints a
+secret value.
 
 ```
 npx skopecreep
 ```
+
+## Contents
+
+- [Sample output](#sample-output)
+- [Install](#install)
+- [Usage](#usage)
+- [What it checks](#what-it-checks)
+- [Why](#why)
+- [skopecreep vs mcp-scan](#skopecreep-vs-mcp-scan)
+- [Safety](#safety)
+- [Development](#development)
+- [Roadmap](#roadmap)
+- [License](#license)
 
 ## Sample output
 
@@ -73,16 +82,13 @@ The same scan with `--format html --out report.html` produces a shareable,
 self-contained dossier version of this report with the same findings and
 fixes, groupable by tool or severity.
 
-> A recorded terminal GIF and an HTML-report screenshot are planned for this
-> section — text output above is real tool output, not mocked up.
-
 ## Install
 
 ```bash
-# one-off, no install
+# one-off, no install (recommended for a first look)
 npx skopecreep
 
-# or install globally
+# or install globally for repeated use
 npm install -g skopecreep
 skopecreep
 
@@ -92,36 +98,6 @@ npx skopecreep scan --fail-on high
 
 Requires Node.js >= 20. `skopecreep` only reads local files — it never sends
 anything over the network.
-
-## skopecreep vs mcp-scan
-
-They audit different sides of the same problem and are meant to be used
-together, not as alternatives:
-
-| | [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) | skopecreep |
-| --- | --- | --- |
-| Audits | The MCP **servers** you connect to (tool poisoning, rug pulls, cross-server injection) | **Your machine's** granted scope across every coding agent (permissions, hooks, trust, secrets, context injection) |
-| Scope | MCP protocol specifically | Claude Code, Codex CLI, Cursor, Windsurf, Copilot, and generic `AGENTS.md`/`.mcp.json` — MCP is one part of it |
-| Question it answers | "Is this MCP server safe to connect to?" | "What have I actually granted my agents, and where does it stand out as risky?" |
-| Output | Server-side risk findings | Calibrated findings ranked by `risk = impact × (exposure + exploitability)`, with baselining and `--fail-on` for CI |
-
-If you connect to third-party MCP servers, run mcp-scan on those servers and
-skopecreep on your own machine's configuration — they don't overlap.
-
-## Why
-
-Every AI coding tool accumulates an invisible attack surface: an MCP server that
-runs `npx -y something@latest` on launch, a `bypassPermissions` default, a
-broadly "trusted" parent directory, an OAuth token sitting in a plaintext
-`auth.json`, or a `CLAUDE.md` that quietly tells the agent to fetch and run an
-external file. `skopecreep` puts all of it in one report — ranked, explained,
-and with a concrete fix.
-
-The design goal is **calibration, not noise**. Severity is computed as
-`risk = impact × (exposure + exploitability)`, so a zero-impact observation (a
-non-secret UUID, a first-party SaaS MCP host) can never be escalated into a
-scary finding, and the *same* secret is rated `medium` at `600` perms in your
-home dir but `critical` once it lands in a git repo or a synced folder.
 
 ## Usage
 
@@ -178,6 +154,36 @@ changes.
 | `context-base64-blob` | Large embedded base64 payloads in context |
 | `context-external-dep` | Instructions that depend on an external file |
 | `world-writable-config` | Agent config writable by other local users |
+
+## Why
+
+Every AI coding tool accumulates an invisible attack surface: an MCP server that
+runs `npx -y something@latest` on launch, a `bypassPermissions` default, a
+broadly "trusted" parent directory, an OAuth token sitting in a plaintext
+`auth.json`, or a `CLAUDE.md` that quietly tells the agent to fetch and run an
+external file. `skopecreep` puts all of it in one report — ranked, explained,
+and with a concrete fix.
+
+The design goal is **calibration, not noise**. Severity is computed as
+`risk = impact × (exposure + exploitability)`, so a zero-impact observation (a
+non-secret UUID, a first-party SaaS MCP host) can never be escalated into a
+scary finding, and the *same* secret is rated `medium` at `600` perms in your
+home dir but `critical` once it lands in a git repo or a synced folder.
+
+## skopecreep vs mcp-scan
+
+They audit different sides of the same problem and are meant to be used
+together, not as alternatives:
+
+| | [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) | skopecreep |
+| --- | --- | --- |
+| Audits | The MCP **servers** you connect to (tool poisoning, rug pulls, cross-server injection) | **Your machine's** granted scope across every coding agent (permissions, hooks, trust, secrets, context injection) |
+| Scope | MCP protocol specifically | Claude Code, Codex CLI, Cursor, Windsurf, Copilot, and generic `AGENTS.md`/`.mcp.json` — MCP is one part of it |
+| Question it answers | "Is this MCP server safe to connect to?" | "What have I actually granted my agents, and where does it stand out as risky?" |
+| Output | Server-side risk findings | Calibrated findings ranked by `risk = impact × (exposure + exploitability)`, with baselining and `--fail-on` for CI |
+
+If you connect to third-party MCP servers, run mcp-scan on those servers and
+skopecreep on your own machine's configuration — they don't overlap.
 
 ## Safety
 
