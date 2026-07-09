@@ -6,6 +6,7 @@
  * a new tool by writing one collector, and add a new check by writing one
  * detector, without either knowing about the other.
  */
+import type { AtlasRef } from "./atlas.js";
 
 export type ToolId =
   | "claude-code"
@@ -152,6 +153,12 @@ export interface Finding {
   rationale: string;
   remediation: string;
   evidence: Evidence[];
+  /**
+   * MITRE ATLAS (https://atlas.mitre.org/matrices/ATLAS) tactic/technique
+   * mapping for ruleId. Detectors don't set this — runDetectors attaches it
+   * to every finding, so it's always populated by the time a report sees it.
+   */
+  atlas?: AtlasRef[];
 }
 
 /** Reserved for the call-history fast-follow (v0.2). */

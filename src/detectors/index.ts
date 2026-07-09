@@ -1,6 +1,7 @@
 /** Detector registry — runs every rule, dedupes, and severity-sorts findings. */
 import type { Finding, Inventory } from "../model.js";
 import { severityRank } from "../severity.js";
+import { atlasForRule } from "../atlas.js";
 import type { Detector } from "./types.js";
 import { detectSecrets } from "./secrets.js";
 import { detectMcpSupplyChain } from "./mcpSupplyChain.js";
@@ -37,7 +38,7 @@ export function runDetectors(inv: Inventory): Finding[] {
     for (const f of findings) {
       if (seen.has(f.id)) continue;
       seen.add(f.id);
-      all.push(f);
+      all.push({ ...f, atlas: atlasForRule(f.ruleId) });
     }
   }
   all.sort((a, b) => {

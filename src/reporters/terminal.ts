@@ -72,6 +72,12 @@ export function renderTerminal(report: AuditReport, opts: TerminalOptions): stri
     for (const f of opts.findings) {
       L.push(`${badge(f.severity)} ${pc.bold(f.title)}`);
       L.push(`  ${pc.dim(`${f.tool} · ${f.ruleId} · confidence ${f.confidence}`)}`);
+      if (f.atlas && f.atlas.length > 0) {
+        const tags = f.atlas
+          .map((a) => `${a.techniqueId} ${a.techniqueName} (${a.tacticName})`)
+          .join(pc.dim(", "));
+        L.push(`  ${pc.dim("ATLAS:")} ${pc.magenta(tags)}`);
+      }
       L.push(`  ${f.rationale}`);
       for (const e of f.evidence) {
         const loc = e.locator ? pc.dim(` (${e.locator})`) : "";
