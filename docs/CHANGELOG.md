@@ -15,6 +15,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   and HTML (linked technique tags) reporters. See `src/atlas.ts` for the full
   rule → technique mapping and `test/atlas.test.ts` for the coverage guard
   that fails CI if a new rule ships without a mapping.
+- Five new detection rules derived from ATLAS techniques that are observable
+  in static config (23 rules total):
+  - `mcp-remote-code-source` — MCP servers running code from a remote URL /
+    git ref with no commit pin (`AML.T0011.001`, `AML.T0010.001`)
+  - `mcp-insecure-transport` — remote MCP servers over plain `http://` to a
+    non-localhost host (`AML.T0010.001`, `AML.T0025`)
+  - `hook-agent-recursion` — lifecycle hooks that re-invoke a coding agent,
+    escalated on Stop events where it recurses (`AML.T0034.002`)
+  - `context-self-replication` — context files instructing the agent to copy
+    their instructions into other files/repos (`AML.T0061`)
+  - `context-system-prompt-probe` — context files instructing the agent to
+    disclose its system prompt (`AML.T0056`, `AML.T0069.002`)
+
+### Changed
+- Remediation is now three graded fixes per finding — `loose` (lowest
+  friction), `medium` (recommended), `tight` (max lockdown) — in all three
+  reporters. **Breaking for JSON consumers:** `finding.remediation` changed
+  from a string to `{ loose, medium, tight }`.
+- A hook that only re-invokes an agent no longer also raises the generic
+  `lifecycle-hook` finding (the recursion finding covers it); it still raises
+  both when the command is network-reaching/obfuscated.
 
 ## [0.1.0] - 2026-07-02
 

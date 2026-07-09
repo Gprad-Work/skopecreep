@@ -84,7 +84,9 @@ export function renderTerminal(report: AuditReport, opts: TerminalOptions): stri
         L.push(`  ${pc.dim("↳")} ${pc.cyan(e.path)}${loc}`);
         if (e.redactedSnippet) L.push(`      ${pc.dim(e.redactedSnippet)}`);
       }
-      L.push(`  ${pc.green("fix:")} ${f.remediation}`);
+      L.push(`  ${pc.green("fix")} ${pc.dim("(loose)")}  ${f.remediation.loose}`);
+      L.push(`  ${pc.green("fix")} ${pc.bold("(medium)")} ${f.remediation.medium}`);
+      L.push(`  ${pc.green("fix")} ${pc.dim("(tight)")}  ${f.remediation.tight}`);
       L.push("");
     }
   }

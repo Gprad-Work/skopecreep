@@ -142,6 +142,19 @@ export interface Evidence {
   redactedSnippet?: string;
 }
 
+/**
+ * Three graded fixes per finding, so the reader picks their own point on the
+ * security/friction curve instead of being handed one absolute.
+ */
+export interface Remediation {
+  /** lowest-friction mitigation — keeps the current workflow, trims the risk */
+  loose: string;
+  /** the balanced fix most users should apply */
+  medium: string;
+  /** maximum lockdown — strictest posture, most workflow friction */
+  tight: string;
+}
+
 export interface Finding {
   /** stable fingerprint for baselining */
   id: string;
@@ -151,7 +164,7 @@ export interface Finding {
   confidence: Confidence;
   title: string;
   rationale: string;
-  remediation: string;
+  remediation: Remediation;
   evidence: Evidence[];
   /**
    * MITRE ATLAS (https://atlas.mitre.org/matrices/ATLAS) tactic/technique

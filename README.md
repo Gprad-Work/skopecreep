@@ -86,8 +86,10 @@ changes.
 | `secret-in-mcp-env` | Secret-looking values in an MCP server's `env` block |
 | `secret-in-context` | Secrets embedded in instruction/memory files |
 | `mcp-unpinned-package` | MCP servers that auto-install unpinned packages (`@latest`) |
+| `mcp-remote-code-source` | MCP servers that run code from a remote URL/git ref with no commit pin |
 | `mcp-shell-server` | MCP servers launched through a shell |
 | `mcp-unknown-remote-host` | Remote MCP servers on unrecognized hosts |
+| `mcp-insecure-transport` | Remote MCP servers over plain `http://` (non-localhost) |
 | `broad-permission` | Un-scoped auto-allow rules (`Bash(*)`, etc.) |
 | `permission-bypass-mode` | `bypassPermissions` / `acceptEdits` defaults |
 | `auto-approve` | Auto-run / YOLO / never-prompt settings |
@@ -95,7 +97,10 @@ changes.
 | `weak-sandbox` | Sandboxing disabled / `danger-full-access` |
 | `broad-cmd-allowlist` | Shell commands auto-allowed without confirmation |
 | `lifecycle-hook` | Hooks that auto-run commands (escalated if network/obfuscated) |
+| `hook-agent-recursion` | Hooks that re-invoke a coding agent (loop / runaway-cost risk) |
 | `context-injection` | Prompt-injection language in instruction/memory files |
+| `context-self-replication` | Instructions that tell the agent to copy themselves into other files/repos |
+| `context-system-prompt-probe` | Instructions that try to make the agent disclose its system prompt |
 | `context-hidden-unicode` | Hidden / bidirectional Unicode (Trojan Source) in context |
 | `context-base64-blob` | Large embedded base64 payloads in context |
 | `context-external-dep` | Instructions that depend on an external file |
@@ -105,6 +110,11 @@ Every finding is also tagged with the [MITRE ATLAS](https://atlas.mitre.org/matr
 tactic/technique it enables (e.g. `weak-sandbox` → `AML.T0053` AI Agent Tool
 Invocation) — visible in the terminal, JSON, and HTML reports. See
 [`src/atlas.ts`](src/atlas.ts) for the full rule → technique mapping.
+
+Each finding ships **three graded fixes** instead of one absolute: a **loose**
+fix (lowest friction — keeps your workflow, trims the risk), a **medium** fix
+(the balanced default most users should apply), and a **tight** fix (maximum
+lockdown). Pick your own point on the security/friction curve.
 
 ## Why
 

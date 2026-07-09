@@ -26,7 +26,9 @@ const TA = {
   execution: { id: "AML.TA0005", name: "Execution" },
   persistence: { id: "AML.TA0006", name: "Persistence" },
   defenseEvasion: { id: "AML.TA0007", name: "Defense Evasion" },
+  discovery: { id: "AML.TA0008", name: "Discovery" },
   exfiltration: { id: "AML.TA0010", name: "Exfiltration" },
+  impact: { id: "AML.TA0011", name: "Impact" },
   privilegeEscalation: { id: "AML.TA0012", name: "Privilege Escalation" },
   credentialAccess: { id: "AML.TA0013", name: "Credential Access" },
 } as const satisfies Record<string, AtlasTactic>;
@@ -48,6 +50,21 @@ export const ATLAS_TECHNIQUES = {
     name: "AI Supply Chain Compromise: Data",
     tactics: [TA.initialAccess],
   },
+  "AML.T0011.001": {
+    id: "AML.T0011.001",
+    name: "User Execution: Malicious Package",
+    tactics: [TA.execution],
+  },
+  "AML.T0025": {
+    id: "AML.T0025",
+    name: "Exfiltration via Cyber Means",
+    tactics: [TA.exfiltration],
+  },
+  "AML.T0034.002": {
+    id: "AML.T0034.002",
+    name: "Cost Harvesting: Agentic Resource Consumption",
+    tactics: [TA.impact],
+  },
   "AML.T0050": {
     id: "AML.T0050",
     name: "Command and Scripting Interpreter",
@@ -68,15 +85,30 @@ export const ATLAS_TECHNIQUES = {
     name: "Unsecured Credentials",
     tactics: [TA.credentialAccess],
   },
+  "AML.T0056": {
+    id: "AML.T0056",
+    name: "Extract LLM System Prompt",
+    tactics: [TA.exfiltration],
+  },
   "AML.T0057": {
     id: "AML.T0057",
     name: "LLM Data Leakage",
     tactics: [TA.exfiltration],
   },
+  "AML.T0061": {
+    id: "AML.T0061",
+    name: "LLM Prompt Self-Replication",
+    tactics: [TA.persistence],
+  },
   "AML.T0068": {
     id: "AML.T0068",
     name: "LLM Prompt Obfuscation",
     tactics: [TA.defenseEvasion],
+  },
+  "AML.T0069.002": {
+    id: "AML.T0069.002",
+    name: "Discover LLM System Information: System Prompt",
+    tactics: [TA.discovery],
   },
 } as const satisfies Record<string, AtlasTechnique>;
 
@@ -89,7 +121,9 @@ export const RULE_ATLAS_MAP: Record<string, AtlasTechniqueId[]> = {
   "secret-in-context": ["AML.T0055", "AML.T0057"],
   "mcp-unpinned-package": ["AML.T0010.001"],
   "mcp-shell-server": ["AML.T0050"],
+  "mcp-remote-code-source": ["AML.T0011.001", "AML.T0010.001"],
   "mcp-unknown-remote-host": ["AML.T0010.001"],
+  "mcp-insecure-transport": ["AML.T0010.001", "AML.T0025"],
   "broad-permission": ["AML.T0053"],
   "permission-bypass-mode": ["AML.T0053"],
   "auto-approve": ["AML.T0053"],
@@ -97,7 +131,10 @@ export const RULE_ATLAS_MAP: Record<string, AtlasTechniqueId[]> = {
   "weak-sandbox": ["AML.T0053"],
   "broad-cmd-allowlist": ["AML.T0053"],
   "lifecycle-hook": ["AML.T0050"],
+  "hook-agent-recursion": ["AML.T0034.002"],
   "context-injection": ["AML.T0051.001"],
+  "context-self-replication": ["AML.T0061", "AML.T0051.001"],
+  "context-system-prompt-probe": ["AML.T0056", "AML.T0069.002"],
   "context-hidden-unicode": ["AML.T0068"],
   "context-base64-blob": ["AML.T0068"],
   "context-external-dep": ["AML.T0010.002"],

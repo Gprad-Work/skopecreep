@@ -61,7 +61,11 @@ export const detectAllowlist: Detector = (inv) => {
       rationale:
         `${grp.path} allowlists command prefix(es) that run without a prompt, including: ${listed.join(", ")}. ` +
         `Auto-allowed network/exec commands are a direct exfiltration and code-execution path if the agent is misled.`,
-      remediation: `Keep the allowlist to fully-specified, side-effect-free commands; require confirmation for shell, network, and cloud-CLI calls.`,
+      remediation: {
+        loose: `Constrain each risky prefix with its full arguments (a fixed URL, a fixed subcommand) instead of allowlisting the bare binary.`,
+        medium: `Drop shell/interpreter and network binaries (bash, python, curl, ssh, cloud CLIs) from the allowlist; keep auto-allow for read-only commands only.`,
+        tight: `Rebuild the allowlist from empty: add only fully-specified, side-effect-free commands as they prove routine, and let everything else prompt.`,
+      },
       evidence: [{ path: grp.path, redactedSnippet: listed.join(" | ") }],
     });
   }

@@ -1,4 +1,4 @@
-/** MCP exposure: remote servers pointing at unknown (non-mainstream) hosts. */
+/** MCP exposure: remote servers on unknown (non-mainstream) hosts or plain-HTTP transport. */
 import type { Finding } from "../model.js";
 import type { Detector } from "./types.js";
 import { computeSeverity } from "../severity.js";
@@ -35,10 +35,38 @@ function isKnownHost(host: string): boolean {
   return KNOWN_HOSTS.some((k) => h === k || h.endsWith("." + k));
 }
 
+function isLoopback(host: string): boolean {
+  const h = host.toLowerCase().replace(/^\[|\]$/g, "");
+  return h === "localhost" || h === "127.0.0.1" || h === "::1" || h.endsWith(".localhost");
+}
+
 export const detectMcpHostTrust: Detector = (inv) => {
   const findings: Finding[] = [];
   for (const s of inv.mcpServers) {
     if (s.transport === "stdio" || !s.host) continue;
+
+    // Plain HTTP to a non-loopback host: tool definitions and session data
+    // (often including auth headers) cross the network readable and mutable.
+    if (s.url?.toLowerCase().startsWith("http://") && !isLoopback(s.host)) {
+      findings.push({
+        id: makeFindingId("mcp-insecure-transport", [s.tool, s.name, s.host]),
+        ruleId: "mcp-insecure-transport",
+        tool: s.tool,
+        severity: computeSeverity({ impact: 2, exposure: 2, exploitability: 1 }),
+        confidence: "high",
+        title: `MCP server "${s.name}" uses unencrypted http:// to ${s.host}`,
+        rationale:
+          `"${s.name}" connects to ${s.url} over plain HTTP. Everything on that channel — the tool definitions the agent trusts, ` +
+          `request/response data, any auth header — is readable and modifiable by anyone on the network path.`,
+        remediation: {
+          loose: `Confirm the host is on a network you fully control (e.g. a LAN service) and that no credentials ride on the connection.`,
+          medium: `Switch the endpoint to https:// — if the server doesn't offer TLS, put it behind a reverse proxy that does.`,
+          tight: `Use https with authentication, and tunnel to it (VPN/SSH) if the server lives on a network you don't control end-to-end.`,
+        },
+        evidence: [{ path: s.source.path, locator: s.source.locator, redactedSnippet: `${s.transport} → ${s.url}` }],
+      });
+    }
+
     if (isKnownHost(s.host)) continue; // first-party SaaS → inventory only, not a finding
     findings.push({
       id: makeFindingId("mcp-unknown-remote-host", [s.tool, s.name, s.host]),
@@ -50,7 +78,11 @@ export const detectMcpHostTrust: Detector = (inv) => {
       rationale:
         `"${s.name}" connects to ${s.url}. This host isn't a recognized first-party MCP provider, so its tool definitions and ` +
         `data handling aren't independently vetted — the remote can also change the tools it offers at any time.`,
-      remediation: `Confirm you trust ${s.host}. Prefer official/first-party MCP endpoints, and review the tools it exposes before enabling auto-approval.`,
+      remediation: {
+        loose: `Confirm you trust ${s.host}, and keep per-use approval on for the tools it exposes.`,
+        medium: `Switch to the provider's official first-party MCP endpoint if one exists; review this server's tool list before granting any auto-approval.`,
+        tight: `Remove the server (or self-host an audited copy), and only reconnect third-party MCP endpoints after reviewing what they expose and pinning approvals per-tool.`,
+      },
       evidence: [{ path: s.source.path, locator: s.source.locator, redactedSnippet: `${s.transport} → ${s.url}` }],
     });
   }
