@@ -101,6 +101,15 @@ describe("detectHooks", () => {
     expect(findings.some((f) => f.ruleId === "lifecycle-hook")).toBe(true);
   });
 
+  it("detects an agent invocation behind env-assignment and wrapper prefixes", () => {
+    for (const command of ['env CLAUDE_FLAGS=1 claude -p go', "sudo claude --print resume", "nohup claude -p x"]) {
+      const findings = detectHooks(
+        inv({ hooks: [{ tool: "claude-code", event: "Stop", command, source: src("settings.json") }] }),
+      );
+      expect(findings.some((f) => f.ruleId === "hook-agent-recursion"), `missed: ${command}`).toBe(true);
+    }
+  });
+
   it("does not flag commands that merely mention an agent name in an argument", () => {
     const findings = detectHooks(
       inv({

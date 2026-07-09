@@ -96,6 +96,70 @@ describe("detectMcpSupplyChain", () => {
     expect(findings.some((f) => f.ruleId === "mcp-remote-code-source")).toBe(false);
   });
 
+  it("does not double-flag a github: spec as unpinned-package (remote-code-source owns it)", () => {
+    const findings = detectMcpSupplyChain(
+      inv({
+        mcpServers: [
+          stdioServer({
+            command: "npx",
+            args: ["-y", "github:someuser/mcp-server"],
+            packageSpec: "github:someuser/mcp-server",
+            pinned: false,
+          }),
+        ],
+      }),
+    );
+    expect(findings.some((f) => f.ruleId === "mcp-remote-code-source")).toBe(true);
+    expect(findings.some((f) => f.ruleId === "mcp-unpinned-package")).toBe(false);
+  });
+
+  it("does not flag a SHA-pinned github: spec as unpinned-package either", () => {
+    const findings = detectMcpSupplyChain(
+      inv({
+        mcpServers: [
+          stdioServer({
+            command: "npx",
+            args: ["-y", "github:someuser/mcp-server#0f4c9a1"],
+            packageSpec: "github:someuser/mcp-server#0f4c9a1",
+            pinned: false,
+          }),
+        ],
+      }),
+    );
+    expect(findings).toHaveLength(0);
+  });
+
+  it("is not fooled by an incidental hex token elsewhere on the command line", () => {
+    const findings = detectMcpSupplyChain(
+      inv({
+        mcpServers: [
+          stdioServer({
+            command: "npx",
+            args: ["-y", "github:someuser/mcp-server", "--session", "@deadbeef1234"],
+          }),
+        ],
+      }),
+    );
+    expect(findings.some((f) => f.ruleId === "mcp-remote-code-source")).toBe(true);
+  });
+
+  it("uses the full scoped package name in the unpinned-package loose fix", () => {
+    const findings = detectMcpSupplyChain(
+      inv({
+        mcpServers: [
+          stdioServer({
+            command: "npx",
+            args: ["-y", "@scope/server@latest"],
+            packageSpec: "@scope/server@latest",
+            pinned: false,
+          }),
+        ],
+      }),
+    );
+    const f = findings.find((x) => x.ruleId === "mcp-unpinned-package");
+    expect(f?.remediation.loose).toContain('"@scope/server@1"');
+  });
+
   it("does not flag a plain registry package as a remote code source", () => {
     const findings = detectMcpSupplyChain(
       inv({ mcpServers: [stdioServer({ command: "npx", args: ["-y", "snyk@1.2.3", "mcp"], packageSpec: "snyk@1.2.3", pinned: true })] }),

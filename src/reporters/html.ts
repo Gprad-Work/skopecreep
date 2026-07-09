@@ -10,6 +10,7 @@
  * both as a local `--out report.html` and under a strict CSP.
  */
 import type { AuditReport, Finding, Severity, ToolId } from "../model.js";
+import { REMEDIATION_TIERS } from "../model.js";
 import { SEVERITY_ORDER } from "../severity.js";
 
 export interface HtmlOptions {
@@ -229,9 +230,10 @@ function renderFinding(f: Finding): string {
     ${renderEvidence(f)}
     ${renderAtlasTags(f)}
     <div class="fixes">
-      <p class="fix loose"><span class="k">Loose fix</span><span>${esc(f.remediation.loose)}</span></p>
-      <p class="fix medium"><span class="k">Medium fix</span><span>${esc(f.remediation.medium)}</span></p>
-      <p class="fix tight"><span class="k">Tight fix</span><span>${esc(f.remediation.tight)}</span></p>
+      ${REMEDIATION_TIERS.map(
+        (t) =>
+          `<p class="fix ${t}"><span class="k">${t[0]!.toUpperCase()}${t.slice(1)} fix</span><span>${esc(f.remediation[t])}</span></p>`,
+      ).join("\n      ")}
     </div>
   </article>`;
 }

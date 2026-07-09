@@ -37,7 +37,10 @@ function isKnownHost(host: string): boolean {
 
 function isLoopback(host: string): boolean {
   const h = host.toLowerCase().replace(/^\[|\]$/g, "");
-  return h === "localhost" || h === "127.0.0.1" || h === "::1" || h.endsWith(".localhost");
+  if (h === "localhost" || h.endsWith(".localhost")) return true;
+  if (h.startsWith("127.")) return true; // whole 127.0.0.0/8 block is loopback
+  // ::1 in compressed or expanded form (0:0:0:0:0:0:0:1, 0000:...:0001)
+  return h === "::1" || /^(?:0+:){2,7}0*1$/.test(h);
 }
 
 export const detectMcpHostTrust: Detector = (inv) => {

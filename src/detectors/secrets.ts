@@ -41,9 +41,13 @@ export const detectSecrets: Detector = (inv) => {
         `File perms: ${c.perms}${c.inVcsOrSyncedDir ? "; inside a git/synced directory" : ""}. ` +
         `Anyone able to read this file inherits the associated access.`,
       remediation: {
-        loose: `Make the file owner-only (chmod 600) and keep it out of git repos and cloud-synced folders.`,
-        medium: `Move the credential into an OS keychain or secret manager and delete the plaintext file (many tools support keychain-backed auth).`,
-        tight: `Rotate the credential now — treat it as exposed${c.inVcsOrSyncedDir ? " (it is in a git/synced directory)" : ""} — then store the replacement only in a secret manager and add secret scanning to your repos.`,
+        loose: `Make the file owner-only (chmod 600) and keep it out of git repos and cloud-synced folders.${
+          c.inVcsOrSyncedDir || c.worldOrGroupReadable
+            ? " This one is already exposed (git/synced dir or readable by others) — rotate it now regardless of which tier you pick."
+            : ""
+        }`,
+        medium: `Rotate the credential, then keep the replacement in an OS keychain or secret manager and delete the plaintext file (many tools support keychain-backed auth).`,
+        tight: `Rotate it, store the replacement only in a secret manager, and add secret scanning (pre-commit/CI) so a credential can't sit in plaintext again.`,
       },
       evidence: [{ path: c.path, redactedSnippet: c.redactedFingerprint }],
     });
@@ -87,7 +91,7 @@ export const detectSecrets: Detector = (inv) => {
         `${ctx.path} contains ${matches.length} secret-looking value(s), e.g. ${fingerprint(matches[0]!)}. ` +
         `Instruction/memory files are frequently shared, synced, or committed — a poor place for credentials.`,
       remediation: {
-        loose: `Remove the secret from the ${ctx.role} file; if the agent needs it, reference an environment variable instead.`,
+        loose: `Remove the secret from the ${ctx.role} file (reference an environment variable if the agent needs it) — and assume it has already traveled, so rotation is still the safe call.`,
         medium: `Remove it and rotate the credential — context files get shared, synced, and committed, so assume it has traveled.`,
         tight: `Remove, rotate, and add a pre-commit secret scanner so credentials can't land in context files (or any file) again.`,
       },

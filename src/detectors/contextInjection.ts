@@ -39,12 +39,14 @@ const EXTERNAL_DEP =
 const SELF_REPLICATION =
   /\b(?:add|copy|append|insert|write|inject|propagate|replicate|duplicate)\b[^.\n]{0,60}\b(?:these\s+(?:instructions|rules)|this\s+(?:file|prompt|rule|instruction|section)|itself)\b[^.\n]{0,80}\b(?:CLAUDE\.md|AGENTS\.md|\.cursorrules|\.windsurfrules|copilot-instructions|(?:other|every|all|any)\s+(?:repo|project|file|workspace)\w*)/i;
 // Extraction probe: the file tells the agent to disclose its system prompt /
-// hidden instructions (ATLAS AML.T0056 / AML.T0069.002).
+// hidden instructions (ATLAS AML.T0056 / AML.T0069.002). "initial/hidden
+// instructions" requires a possessive (your/its) so ordinary prose like
+// "show the initial instructions to new contributors" doesn't trip it.
 const SYSTEM_PROMPT_PROBE =
-  /\b(?:reveal|print|show|output|repeat|dump|display|echo|disclose|paste)\b[^.\n]{0,40}\b(?:system\s+prompt|initial\s+instructions?|hidden\s+instructions?|developer\s+message|(?:text|instructions|everything)\s+above\s+this)\b/i;
+  /\b(?:reveal|print|show|output|repeat|dump|display|echo|disclose|paste)\b[^.\n]{0,40}\b(?:system\s+prompt|(?:your|its)\s+(?:initial|hidden)\s+instructions?|developer\s+message|(?:text|instructions|everything)\s+above\s+this)\b/i;
 
-function firstMatchingLine(content: string, re: RegExp): string {
-  for (const line of content.split(/\r?\n/)) {
+function firstMatchingLine(lines: string[], re: RegExp): string {
+  for (const line of lines) {
     if (re.test(line)) return evidenceSnippet(line);
   }
   return "";
@@ -54,6 +56,8 @@ function scanOne(ctx: ContextSource): Finding[] {
   const out: Finding[] = [];
   const { content } = ctx;
   if (!content) return out;
+  // Context files can be large; split once and share across every rule below.
+  const lines = content.split(/\r?\n/);
 
   // 1. Injection phrases (highest tier matched wins, one finding per file).
   const highHits = HIGH_PHRASES.filter((p) => p.re.test(content)).map((p) => p.name);
@@ -80,7 +84,7 @@ function scanOne(ctx: ContextSource): Finding[] {
         medium: `If you didn't author it (e.g. it arrived via a cloned repo or shared config), delete the passage and diff the file against a version you trust.`,
         tight: `Delete the passage, treat the source repo/config as untrusted, and check git history plus your other context files for how it got in and whether it spread.`,
       },
-      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(content, sampleRe) }],
+      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(lines, sampleRe) }],
     });
   }
 
@@ -146,7 +150,7 @@ function scanOne(ctx: ContextSource): Finding[] {
         medium: `Inline the guidance into this file so there's no external dependency, or keep the referenced file in the same version-controlled repo.`,
         tight: `Inline the guidance and remove instructions that have the agent read/run files outside the project — context should be self-contained and reviewable in one place.`,
       },
-      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(content, EXTERNAL_DEP) }],
+      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(lines, EXTERNAL_DEP) }],
     });
   }
 
@@ -167,7 +171,7 @@ function scanOne(ctx: ContextSource): Finding[] {
         medium: `Remove the propagation instruction; if you need shared guidance across repos, distribute it through version control instead.`,
         tight: `Remove the instruction and search every repo/workspace the agent has touched for copies it may already have planted.`,
       },
-      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(content, SELF_REPLICATION) }],
+      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(lines, SELF_REPLICATION) }],
     });
   }
 
@@ -188,7 +192,7 @@ function scanOne(ctx: ContextSource): Finding[] {
         medium: `Remove the extraction instruction — there's no legitimate reason for a persistent context file to dump the system prompt.`,
         tight: `Remove it and review where the agent's recent output went (PRs, logs, chat exports) to see if the prompt already leaked.`,
       },
-      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(content, SYSTEM_PROMPT_PROBE) }],
+      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(lines, SYSTEM_PROMPT_PROBE) }],
     });
   }
 

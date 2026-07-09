@@ -75,6 +75,15 @@ describe("detectMcpHostTrust", () => {
     expect(findings.some((f) => f.ruleId === "mcp-insecure-transport")).toBe(false);
   });
 
+  it("treats the whole 127/8 block and expanded IPv6 loopback as loopback", () => {
+    for (const host of ["127.0.0.2", "[0:0:0:0:0:0:0:1]"]) {
+      const findings = detectMcpHostTrust(
+        inv({ mcpServers: [remoteServer({ host, url: `http://${host}:8080/mcp` })] }),
+      );
+      expect(findings.some((f) => f.ruleId === "mcp-insecure-transport"), `flagged loopback ${host}`).toBe(false);
+    }
+  });
+
   it("does not flag https:// URLs as insecure transport", () => {
     const findings = detectMcpHostTrust(inv({ mcpServers: [remoteServer({ host: "evil.example.com" })] }));
     expect(findings.some((f) => f.ruleId === "mcp-insecure-transport")).toBe(false);

@@ -155,6 +155,9 @@ export interface Remediation {
   tight: string;
 }
 
+/** Render order for remediation tiers — reporters iterate this, never hardcode. */
+export const REMEDIATION_TIERS = ["loose", "medium", "tight"] as const satisfies readonly (keyof Remediation)[];
+
 export interface Finding {
   /** stable fingerprint for baselining */
   id: string;

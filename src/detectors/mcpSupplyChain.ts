@@ -10,9 +10,20 @@ const SHELLS = new Set(["bash", "sh", "zsh", "fish"]);
 
 // Code pulled straight from a moving remote ref: git URLs, github: shorthands,
 // or a script/archive URL passed to a runner. A 7+ hex commit pin (@<sha> or
-// #<sha>) makes the ref immutable, so those are not flagged.
+// #<sha>) makes the ref immutable, so those are not flagged. The pin is
+// checked on the source token itself, not the whole command line — an
+// incidental hex token elsewhere must not vouch for the ref.
 const REMOTE_CODE_SOURCE = /(?:git\+https?:\/\/|\bgithub:|https?:\/\/[^\s"']+\.(?:sh|bash|py|js|mjs|ts|tar\.gz|tgz|zip|whl))/i;
-const COMMIT_PIN = /[@#][0-9a-f]{7,40}(?:$|[\s"'])/i;
+const COMMIT_PIN = /[@#][0-9a-f]{7,40}(?:$|["'])/i;
+
+/** "@scope/name@1.2.3" | "name@latest" → "@scope/name" | "name" */
+function specName(spec: string): string {
+  const scoped = spec.startsWith("@");
+  const body = scoped ? spec.slice(1) : spec;
+  const at = body.indexOf("@");
+  const name = at === -1 ? body : body.slice(0, at);
+  return scoped ? `@${name}` : name;
+}
 
 export const detectMcpSupplyChain: Detector = (inv) => {
   const findings: Finding[] = [];
@@ -20,7 +31,14 @@ export const detectMcpSupplyChain: Detector = (inv) => {
     if (s.transport !== "stdio" || !s.command) continue;
     const cmdline = `${s.command} ${(s.args ?? []).join(" ")}`.trim();
 
-    if (s.packageSpec && s.pinned === false) {
+    // Classify each server once: a git/URL code source is judged by the
+    // remote-code-source rule alone; registry-style pinning (`@latest`, bare
+    // name) doesn't apply to it, so the unpinned-package rule stands down —
+    // otherwise `github:user/repo` double-flags and `github:user/repo#<sha>`
+    // (no `@version`, but immutable) false-positives as unpinned.
+    const remoteTokens = cmdline.split(/\s+/).filter((t) => REMOTE_CODE_SOURCE.test(t));
+
+    if (remoteTokens.length === 0 && s.packageSpec && s.pinned === false) {
       findings.push({
         id: makeFindingId("mcp-unpinned-package", [s.tool, s.name, s.packageSpec]),
         ruleId: "mcp-unpinned-package",
@@ -32,7 +50,7 @@ export const detectMcpSupplyChain: Detector = (inv) => {
           `"${s.name}" runs \`${evidenceSnippet(cmdline)}\`, which resolves "${s.packageSpec}" fresh from a public registry on every launch. ` +
           `An unpinned dependency means a compromised, hijacked, or typosquatted release would execute with your privileges inside the agent.`,
         remediation: {
-          loose: `Pin at least the major version (e.g. "${s.packageSpec.split("@")[0]}@1") so a hijacked release can't jump you across majors silently.`,
+          loose: `Pin at least the major version (e.g. "${specName(s.packageSpec)}@1") so a hijacked release can't jump you across majors silently.`,
           medium: `Pin the exact version instead of "@latest" or a bare name, and bump it deliberately.`,
           tight: `Pin the exact version and install it once into a local, lockfile-managed directory (or vendor it), so nothing is fetched from the registry at launch time.`,
         },
@@ -40,7 +58,7 @@ export const detectMcpSupplyChain: Detector = (inv) => {
       });
     }
 
-    if (REMOTE_CODE_SOURCE.test(cmdline) && !COMMIT_PIN.test(cmdline)) {
+    if (remoteTokens.some((t) => !COMMIT_PIN.test(t))) {
       findings.push({
         id: makeFindingId("mcp-remote-code-source", [s.tool, s.name]),
         ruleId: "mcp-remote-code-source",
