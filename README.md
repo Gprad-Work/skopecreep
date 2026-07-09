@@ -101,6 +101,11 @@ changes.
 | `context-external-dep` | Instructions that depend on an external file |
 | `world-writable-config` | Agent config writable by other local users |
 
+Every finding is also tagged with the [MITRE ATLAS](https://atlas.mitre.org/matrices/ATLAS)
+tactic/technique it enables (e.g. `weak-sandbox` → `AML.T0053` AI Agent Tool
+Invocation) — visible in the terminal, JSON, and HTML reports. See
+[`src/atlas.ts`](src/atlas.ts) for the full rule → technique mapping.
+
 ## Why
 
 Every AI coding tool accumulates an invisible attack surface: an MCP server that
