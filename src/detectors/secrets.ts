@@ -40,9 +40,15 @@ export const detectSecrets: Detector = (inv) => {
         `${c.path} holds a ${c.kind} in plaintext (${c.redactedFingerprint}). ` +
         `File perms: ${c.perms}${c.inVcsOrSyncedDir ? "; inside a git/synced directory" : ""}. ` +
         `Anyone able to read this file inherits the associated access.`,
-      remediation:
-        `Rotate the credential, keep the file owner-only (chmod 600), and prefer an OS keychain or secret manager over a plaintext file. ` +
-        `If it is in a git repo or cloud-synced folder, purge and rotate immediately.`,
+      remediation: {
+        loose: `Make the file owner-only (chmod 600) and keep it out of git repos and cloud-synced folders.${
+          c.inVcsOrSyncedDir || c.worldOrGroupReadable
+            ? " This one is already exposed (git/synced dir or readable by others) — rotate it now regardless of which tier you pick."
+            : ""
+        }`,
+        medium: `Rotate the credential, then keep the replacement in an OS keychain or secret manager and delete the plaintext file (many tools support keychain-backed auth).`,
+        tight: `Rotate it, store the replacement only in a secret manager, and add secret scanning (pre-commit/CI) so a credential can't sit in plaintext again.`,
+      },
       evidence: [{ path: c.path, redactedSnippet: c.redactedFingerprint }],
     });
   }
@@ -60,9 +66,11 @@ export const detectSecrets: Detector = (inv) => {
       rationale:
         `The env for MCP server "${s.name}" (${s.source.path}) contains value(s) that look like secrets ` +
         `under key(s): ${s.secretEnvKeys.join(", ")}. Secrets in plaintext config are readable by any process/user with file access.`,
-      remediation:
-        `Reference the secret from an environment variable or secret manager instead of inlining it, and restrict file perms. ` +
-        `Never commit MCP config containing secrets.`,
+      remediation: {
+        loose: `Restrict the config file to owner-only perms and make sure it's ignored by git/cloud sync.`,
+        medium: `Replace the inline value with an environment-variable reference (e.g. \${${s.secretEnvKeys[0] ?? "VAR"}}) so the config file holds no secret.`,
+        tight: `Move the secret to a secret manager, inject it into the server's environment at launch, and rotate the currently-inlined value.`,
+      },
       evidence: [{ path: s.source.path, locator: s.source.locator, redactedSnippet: `secret env keys: ${s.secretEnvKeys.join(", ")}` }],
     });
   }
@@ -82,7 +90,11 @@ export const detectSecrets: Detector = (inv) => {
       rationale:
         `${ctx.path} contains ${matches.length} secret-looking value(s), e.g. ${fingerprint(matches[0]!)}. ` +
         `Instruction/memory files are frequently shared, synced, or committed — a poor place for credentials.`,
-      remediation: `Remove the secret from the ${ctx.role} file and rotate it. Keep credentials out of prompt/context files entirely.`,
+      remediation: {
+        loose: `Remove the secret from the ${ctx.role} file (reference an environment variable if the agent needs it) — and assume it has already traveled, so rotation is still the safe call.`,
+        medium: `Remove it and rotate the credential — context files get shared, synced, and committed, so assume it has traveled.`,
+        tight: `Remove, rotate, and add a pre-commit secret scanner so credentials can't land in context files (or any file) again.`,
+      },
       evidence: [{ path: ctx.path, redactedSnippet: fingerprint(matches[0]!) }],
     });
   }

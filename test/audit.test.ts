@@ -134,6 +134,17 @@ describe("calibration", () => {
   });
 });
 
+describe("remediation tiers", () => {
+  it("every finding offers a non-empty loose, medium, and tight fix", () => {
+    expect(report.findings.length).toBeGreaterThan(0);
+    for (const f of report.findings) {
+      for (const tier of ["loose", "medium", "tight"] as const) {
+        expect(f.remediation[tier]?.trim().length, `${f.ruleId} missing ${tier} fix`).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
 describe("never leaks a secret", () => {
   it("no reporter (json/terminal/html) emits a raw secret value", () => {
     const args = { findings: report.findings, suppressedCount: 0, minSeverity: "info" as const };

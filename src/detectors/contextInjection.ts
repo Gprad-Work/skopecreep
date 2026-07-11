@@ -1,6 +1,7 @@
 /**
  * Context integrity: prompt-injection signals, hidden Unicode, embedded
- * payloads, and external-file dependencies in the instruction/memory files that
+ * payloads, external-file dependencies, self-replicating instructions, and
+ * system-prompt extraction probes in the instruction/memory files that
  * steer the agent. These are heuristics -> deliberately medium/low confidence,
  * so a human reviews rather than the tool asserting malice.
  */
@@ -33,9 +34,19 @@ const ZERO_WIDTH = new RegExp("[\\u200B\\u200C\\u200E\\u200F\\u2060-\\u2064]", "
 const BASE64_BLOB = /[A-Za-z0-9+/]{200,}={0,2}/;
 const EXTERNAL_DEP =
   /(?:read|open|load|execute|run|source|include)\s+[`'"]?((?:\/|~\/|\.\.\/)[^\s`'"]+\.(?:ya?ml|sh|bash|zsh|py|js|ts|rb|json|toml))/i;
+// Worm behavior: the file tells the agent to propagate its own instructions
+// into other context files / repos (ATLAS AML.T0061 LLM Prompt Self-Replication).
+const SELF_REPLICATION =
+  /\b(?:add|copy|append|insert|write|inject|propagate|replicate|duplicate)\b[^.\n]{0,60}\b(?:these\s+(?:instructions|rules)|this\s+(?:file|prompt|rule|instruction|section)|itself)\b[^.\n]{0,80}\b(?:CLAUDE\.md|AGENTS\.md|\.cursorrules|\.windsurfrules|copilot-instructions|(?:other|every|all|any)\s+(?:repo|project|file|workspace)\w*)/i;
+// Extraction probe: the file tells the agent to disclose its system prompt /
+// hidden instructions (ATLAS AML.T0056 / AML.T0069.002). "initial/hidden
+// instructions" requires a possessive (your/its) so ordinary prose like
+// "show the initial instructions to new contributors" doesn't trip it.
+const SYSTEM_PROMPT_PROBE =
+  /\b(?:reveal|print|show|output|repeat|dump|display|echo|disclose|paste)\b[^.\n]{0,40}\b(?:system\s+prompt|(?:your|its)\s+(?:initial|hidden)\s+instructions?|developer\s+message|(?:text|instructions|everything)\s+above\s+this)\b/i;
 
-function firstMatchingLine(content: string, re: RegExp): string {
-  for (const line of content.split(/\r?\n/)) {
+function firstMatchingLine(lines: string[], re: RegExp): string {
+  for (const line of lines) {
     if (re.test(line)) return evidenceSnippet(line);
   }
   return "";
@@ -45,6 +56,8 @@ function scanOne(ctx: ContextSource): Finding[] {
   const out: Finding[] = [];
   const { content } = ctx;
   if (!content) return out;
+  // Context files can be large; split once and share across every rule below.
+  const lines = content.split(/\r?\n/);
 
   // 1. Injection phrases (highest tier matched wins, one finding per file).
   const highHits = HIGH_PHRASES.filter((p) => p.re.test(content)).map((p) => p.name);
@@ -66,8 +79,12 @@ function scanOne(ctx: ContextSource): Finding[] {
         `${ctx.path} contains phrasing that resembles an injected instruction (${names.join("; ")}). ` +
         `Because this file is loaded into the agent's context automatically, hostile instructions here execute silently. ` +
         `Confirm this is legitimate guidance and not attacker-supplied content.`,
-      remediation: `Review the file. If you didn't author this passage (e.g. it arrived via a cloned repo or shared config), remove it.`,
-      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(content, sampleRe) }],
+      remediation: {
+        loose: `Read the flagged passage and confirm you (or a teammate) wrote it deliberately.`,
+        medium: `If you didn't author it (e.g. it arrived via a cloned repo or shared config), delete the passage and diff the file against a version you trust.`,
+        tight: `Delete the passage, treat the source repo/config as untrusted, and check git history plus your other context files for how it got in and whether it spread.`,
+      },
+      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(lines, sampleRe) }],
     });
   }
 
@@ -86,7 +103,11 @@ function scanOne(ctx: ContextSource): Finding[] {
       rationale:
         `${ctx.path} contains ${bidi} bidirectional-override and ${zw} zero-width character(s). These are invisible in most ` +
         `editors and are a known way to hide instructions (Trojan Source) inside a file the agent reads verbatim.`,
-      remediation: `Inspect the file with a tool that reveals invisible characters and strip any you didn't intentionally add.`,
+      remediation: {
+        loose: `Open the file in a tool that reveals invisible characters and confirm the hidden characters are harmless (e.g. copy-paste artifacts).`,
+        medium: `Strip every bidi/zero-width character you didn't intentionally add, then re-read the visible text for instructions that were being hidden.`,
+        tight: `Strip the characters, audit how they got in (git blame the lines), and add a pre-commit/CI check that rejects bidi and zero-width characters in context files.`,
+      },
       evidence: [{ path: ctx.path, redactedSnippet: `${bidi} bidi + ${zw} zero-width chars` }],
     });
   }
@@ -103,7 +124,11 @@ function scanOne(ctx: ContextSource): Finding[] {
       rationale:
         `${ctx.path} embeds a long base64 string. That can be benign (an inline image) or a hidden/obfuscated payload the ` +
         `agent might be told to decode and run.`,
-      remediation: `Confirm what the blob decodes to; move legitimate binary assets out of instruction files.`,
+      remediation: {
+        loose: `Decode the blob yourself and confirm it's a benign asset (an image, a diagram) rather than text or code.`,
+        medium: `Move legitimate binary assets out of instruction files and reference them by path instead of inlining them.`,
+        tight: `Remove the blob entirely and keep instruction/memory files plain-text only, so encoded payloads have nowhere to hide.`,
+      },
       evidence: [{ path: ctx.path, redactedSnippet: "base64 blob >=200 chars (not shown)" }],
     });
   }
@@ -120,8 +145,54 @@ function scanOne(ctx: ContextSource): Finding[] {
       rationale:
         `${ctx.path} instructs the agent to read/run an external file before acting. Whoever controls that file effectively ` +
         `controls part of the agent's behavior — a subtle supply-chain link worth being aware of.`,
-      remediation: `Ensure the referenced file is under your control and integrity-checked, or inline the guidance.`,
-      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(content, EXTERNAL_DEP) }],
+      remediation: {
+        loose: `Read the referenced file now and confirm its content is what you expect.`,
+        medium: `Inline the guidance into this file so there's no external dependency, or keep the referenced file in the same version-controlled repo.`,
+        tight: `Inline the guidance and remove instructions that have the agent read/run files outside the project — context should be self-contained and reviewable in one place.`,
+      },
+      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(lines, EXTERNAL_DEP) }],
+    });
+  }
+
+  // 5. Self-replication: instructions that propagate themselves (worm behavior).
+  if (SELF_REPLICATION.test(content)) {
+    out.push({
+      id: makeFindingId("context-self-replication", [ctx.tool, ctx.path]),
+      ruleId: "context-self-replication",
+      tool: ctx.tool,
+      severity: computeSeverity({ impact: 2, exposure: 3, exploitability: 2 }),
+      confidence: "medium",
+      title: `${ctx.role} file tells the agent to copy its instructions elsewhere`,
+      rationale:
+        `${ctx.path} instructs the agent to propagate its own instructions into other context files or repos. ` +
+        `Self-replicating prompts are a persistence technique: one poisoned file quietly seeds every project the agent touches.`,
+      remediation: {
+        loose: `Confirm the propagation is something you set up on purpose (e.g. a deliberate template sync).`,
+        medium: `Remove the propagation instruction; if you need shared guidance across repos, distribute it through version control instead.`,
+        tight: `Remove the instruction and search every repo/workspace the agent has touched for copies it may already have planted.`,
+      },
+      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(lines, SELF_REPLICATION) }],
+    });
+  }
+
+  // 6. System-prompt extraction probe.
+  if (SYSTEM_PROMPT_PROBE.test(content)) {
+    out.push({
+      id: makeFindingId("context-system-prompt-probe", [ctx.tool, ctx.path]),
+      ruleId: "context-system-prompt-probe",
+      tool: ctx.tool,
+      severity: computeSeverity({ impact: 2, exposure: 3, exploitability: 1 }),
+      confidence: "medium",
+      title: `${ctx.role} file asks the agent to disclose its system prompt`,
+      rationale:
+        `${ctx.path} contains an instruction to reveal the system prompt / hidden instructions. In a context file this is ` +
+        `an extraction probe: the disclosed prompt ends up in output the file's author can read, mapping your setup for a follow-on attack.`,
+      remediation: {
+        loose: `Check whether this is your own debugging note; if so, consider removing it once you're done.`,
+        medium: `Remove the extraction instruction — there's no legitimate reason for a persistent context file to dump the system prompt.`,
+        tight: `Remove it and review where the agent's recent output went (PRs, logs, chat exports) to see if the prompt already leaked.`,
+      },
+      evidence: [{ path: ctx.path, redactedSnippet: firstMatchingLine(lines, SYSTEM_PROMPT_PROBE) }],
     });
   }
 

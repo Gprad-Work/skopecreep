@@ -49,7 +49,11 @@ export const detectPermissions: Detector = (inv) => {
         rationale:
           `An "${g.scope}" rule "${g.value}" grants the ${parsed.tool} capability with no scoping (${g.source.path}). ` +
           `A prompt-injection or a mistaken step can then use it without a confirmation gate.`,
-        remediation: `Scope the rule to specific commands/paths (e.g. Bash(git status:*) instead of Bash(*)), or move it to "ask".`,
+        remediation: {
+          loose: `Scope the rule to the specific commands/paths you actually repeat (e.g. Bash(git status:*) instead of Bash(*)).`,
+          medium: `Move the broad rule to "ask" so the capability stays one keypress away but never fires unseen.`,
+          tight: `Delete the rule and approve per use; add narrow allow rules only after a command has proven routine and side-effect-free.`,
+        },
         evidence: [{ path: g.source.path, locator: g.source.locator, redactedSnippet: `${g.scope}: ${g.value}` }],
       });
     } else if (g.kind === "bypass-mode") {
@@ -64,7 +68,11 @@ export const detectPermissions: Detector = (inv) => {
         rationale:
           `A saved default mode of "${g.value}" (${g.source.path}) means sessions start with reduced or no permission gating, ` +
           `so tool calls (including ones triggered by injected content) run with fewer checks.`,
-        remediation: `Remove the saved default and approve actions per-session, or restrict it to a trusted, sandboxed project only.`,
+        remediation: {
+          loose: `Keep the mode but confine it to a single trusted, sandboxed project instead of a global default.`,
+          medium: `Remove the saved default; opt into the reduced-prompting mode per session when a task genuinely needs it.`,
+          tight: `Remove it and run high-autonomy sessions only inside a container/VM where a bad tool call can't reach your real files or credentials.`,
+        },
         evidence: [{ path: g.source.path, locator: g.source.locator, redactedSnippet: g.value }],
       });
     } else if (g.kind === "auto-approve") {
@@ -98,7 +106,11 @@ export const detectPermissions: Detector = (inv) => {
         rationale:
           `${g.source.path} enables automatic approval ("${g.value}"), so the agent can invoke tools/servers without a per-use prompt. ` +
           `This removes a key defense against injected or erroneous actions.`,
-        remediation: `Require per-use approval, at least for shell, network, and file-write tools.`,
+        remediation: {
+          loose: `Carve out the dangerous categories: keep auto-approval for read-only tools but require prompts for shell, network, and file writes.`,
+          medium: `Turn the auto-approval off and approve per use; most workflows lose very little speed.`,
+          tight: `Turn it off and pair per-use approval with a sandboxed working directory, so even an approved mistake stays contained.`,
+        },
         evidence: [{ path: g.source.path, locator: g.source.locator, redactedSnippet: g.value }],
       });
     }

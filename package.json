@@ -1,6 +1,6 @@
 {
   "name": "skopecreep",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Audit the configuration and granted scope of your AI coding tools (Claude Code, Codex, Cursor, Windsurf, Copilot) and flag risky config.",
   "type": "module",
   "bin": {
@@ -23,6 +23,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
     "dev": "tsx src/cli.ts",
     "start": "node dist/cli.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",

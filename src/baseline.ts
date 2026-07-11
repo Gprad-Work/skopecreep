@@ -6,18 +6,24 @@ export interface Baseline {
   ignore: Set<string>;
 }
 
-/** Accepts either `["id", …]` or `{ "ignore": ["id", …] }`. */
+/**
+ * Accepts either `["id", …]` or `{ "ignore": ["id", …] }`.
+ *
+ * A baseline the user explicitly passed but that can't be honored (missing
+ * file, bad JSON, wrong shape) throws instead of degrading to "no baseline" —
+ * silently un-suppressing findings would defeat the point in CI.
+ */
 export function loadBaseline(path: string | undefined): Baseline {
   if (!path) return { ignore: new Set() };
   const text = readTextSafe(path);
-  if (text === null) return { ignore: new Set() };
-  const json = parseJsonSafe<any>(text);
-  const ids: unknown[] = Array.isArray(json)
-    ? json
-    : Array.isArray(json?.ignore)
-      ? json.ignore
-      : [];
-  return { ignore: new Set(ids.filter((x): x is string => typeof x === "string")) };
+  if (text === null) throw new Error(`baseline file not found or unreadable: ${path}`);
+  const json = parseJsonSafe<unknown>(text);
+  if (json === null) throw new Error(`baseline file is not valid JSON: ${path}`);
+  const ids: unknown = Array.isArray(json) ? json : (json as { ignore?: unknown })?.ignore;
+  if (!Array.isArray(ids) || !ids.every((x): x is string => typeof x === "string")) {
+    throw new Error(`baseline must be ["<finding-id>", …] or { "ignore": [ … ] }: ${path}`);
+  }
+  return { ignore: new Set(ids) };
 }
 
 export function applyBaseline(

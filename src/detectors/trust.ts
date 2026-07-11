@@ -35,7 +35,11 @@ export const detectTrust: Detector = (inv) => {
         rationale:
           `${g.scope} is marked "trusted" (${g.source.path}). Trust on a broad parent directory extends reduced friction to ` +
           `every current and future project underneath it, including repos you clone later that could carry hostile agent instructions.`,
-        remediation: `Trust specific project directories, not a broad parent like your home or Documents folder.`,
+        remediation: {
+          loose: `Replace the broad entry with trust entries for the specific project directories you actually work in.`,
+          medium: `Remove the parent-directory trust and re-trust each project the first time you open it — a one-time prompt per repo.`,
+          tight: `Remove it and keep new directories untrusted by default; before trusting a freshly cloned repo, skim its agent context files (CLAUDE.md, .cursorrules, hooks) first.`,
+        },
         evidence: [{ path: g.source.path, locator: g.source.locator, redactedSnippet: `${g.scope} = trusted` }],
       });
     } else if (g.kind === "sandbox") {
@@ -50,7 +54,11 @@ export const detectTrust: Detector = (inv) => {
         rationale:
           `Sandbox mode "${g.value}" (${g.source.path}) lets the agent read/write outside a confined workspace and reach the ` +
           `full filesystem/network, so any tool call — including injected ones — runs with your full user privileges.`,
-        remediation: `Use a confined sandbox (e.g. workspace-write / read-only) unless you explicitly need full access for a single task.`,
+        remediation: {
+          loose: `Stop saving "${g.value}" as the default; pass it per invocation on the rare task that truly needs full access.`,
+          medium: `Set the default to a confined mode (e.g. workspace-write) so the agent can edit the project but nothing outside it.`,
+          tight: `Default to read-only with explicit escalation per task, and give full access only inside a container/VM.`,
+        },
         evidence: [{ path: g.source.path, locator: g.source.locator, redactedSnippet: g.value }],
       });
     }

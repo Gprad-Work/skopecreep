@@ -24,7 +24,11 @@ export const detectFileHygiene: Detector = (inv) => {
       rationale:
         `These ${tool.displayName} config files are group/world-writable, so another local user or process can silently ` +
         `edit them to add MCP servers, hooks, or instructions the agent will then trust: ${writable.join(", ")}.`,
-      remediation: `Restrict the files to owner-only (chmod go-w), and prefer 600 for anything containing config the agent trusts.`,
+      remediation: {
+        loose: `Remove group/world write access (chmod go-w) from the listed files.`,
+        medium: `Set the files to 600 and confirm they're owned by your user, not a shared or service account.`,
+        tight: `Set 600/owner-only, then diff each file against a known-good copy — writable config may already have been tampered with.`,
+      },
       evidence: writable.map((w) => ({ path: w.split(" (")[0]!, redactedSnippet: w })),
     });
   }

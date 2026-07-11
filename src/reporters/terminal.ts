@@ -1,6 +1,7 @@
 /** Human-readable terminal reporter. */
 import pc from "picocolors";
 import type { AuditReport, Finding, Severity, ToolId } from "../model.js";
+import { REMEDIATION_TIERS } from "../model.js";
 import { SEVERITY_ORDER } from "../severity.js";
 
 export interface TerminalOptions {
@@ -84,7 +85,10 @@ export function renderTerminal(report: AuditReport, opts: TerminalOptions): stri
         L.push(`  ${pc.dim("↳")} ${pc.cyan(e.path)}${loc}`);
         if (e.redactedSnippet) L.push(`      ${pc.dim(e.redactedSnippet)}`);
       }
-      L.push(`  ${pc.green("fix:")} ${f.remediation}`);
+      for (const tier of REMEDIATION_TIERS) {
+        const tag = `(${tier})`.padEnd(9);
+        L.push(`  ${pc.green("fix")} ${tier === "medium" ? pc.bold(tag) : pc.dim(tag)}${f.remediation[tier]}`);
+      }
       L.push("");
     }
   }
