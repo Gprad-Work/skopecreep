@@ -54,7 +54,9 @@ skopecreep scan --format json --out report.json
 skopecreep scan --format html --out report.html   # shareable dossier-style report
 skopecreep scan --min-severity medium
 skopecreep scan --fail-on high      # non-zero exit for CI gating
-skopecreep scan --baseline .skopecreep-baseline.json
+skopecreep scan --write-baseline .skopecreep-baseline.json   # accept current findings
+skopecreep scan --baseline .skopecreep-baseline.json         # …and stay quiet about them
+skopecreep scan --verbose           # also list the config files scanned per tool
 skopecreep list-mcp                 # quick MCP-server inventory across tools
 skopecreep redact-check             # self-test: assert no secret leaks into output
 ```
@@ -69,14 +71,19 @@ Options:
 | `--out <file>` | Write the report to a file instead of stdout |
 | `--min-severity <s>` | `info` \| `low` \| `medium` \| `high` \| `critical` (default `low`) |
 | `--baseline <file>` | Suppress findings whose id is listed in this JSON file |
+| `--write-baseline <file>` | Snapshot all current finding ids into a baseline file |
 | `--fail-on <s>` | Exit non-zero if any kept finding is at/above this severity |
+| `--verbose` | Also list the config files each tool's collector read |
 
 ### Baselines
 
-Accept known findings so repeat runs stay quiet. A baseline is JSON — either an
-array of finding ids or `{ "ignore": ["<id>", …] }`. Finding ids are stable
-across runs, so a triaged finding stays suppressed until the underlying config
-changes.
+Accept known findings so repeat runs stay quiet. Create one with
+`--write-baseline <file>` (it snapshots every current finding id), then pass
+`--baseline <file>` on subsequent runs. The file is JSON — either an array of
+finding ids or `{ "ignore": ["<id>", …] }`. Finding ids are stable across
+runs, so a triaged finding stays suppressed until the underlying config
+changes. A baseline file that is missing or malformed is a hard error, not a
+silent no-op.
 
 ## What it checks
 

@@ -8,6 +8,8 @@ export interface TerminalOptions {
   findings: Finding[];
   suppressedCount: number;
   minSeverity: Severity;
+  /** also list the config files each tool's collector actually read */
+  verbose?: boolean;
 }
 
 function sevColor(s: Severity, text: string): string {
@@ -55,6 +57,12 @@ export function renderTerminal(report: AuditReport, opts: TerminalOptions): stri
     const name = t.displayName.padEnd(nameW);
     const summary = t.installed ? toolSummary(report, t.id) : pc.dim("not installed");
     L.push(`  ${mark} ${name}  ${summary}`);
+    if (opts.verbose && t.installed) {
+      if (t.configPaths.length === 0) {
+        L.push(pc.dim(`      (no config files read)`));
+      }
+      for (const p of t.configPaths) L.push(pc.dim(`      · ${p}`));
+    }
   }
   L.push("");
 
@@ -69,6 +77,9 @@ export function renderTerminal(report: AuditReport, opts: TerminalOptions): stri
 
   if (opts.findings.length === 0) {
     L.push(pc.green(`  No findings at or above "${opts.minSeverity}" severity.`));
+    if (opts.minSeverity !== "info") {
+      L.push(pc.dim(`  (run with --min-severity info to include informational items)`));
+    }
   } else {
     for (const f of opts.findings) {
       L.push(`${badge(f.severity)} ${pc.bold(f.title)}`);

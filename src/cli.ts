@@ -6,9 +6,9 @@ import * as path from "node:path";
 import { createRequire } from "node:module";
 import pc from "picocolors";
 import { ALL_TOOL_IDS, type Severity, type ToolId } from "./model.js";
-import { HOME } from "./util.js";
+import { HOME, isDir } from "./util.js";
 import { runAudit } from "./audit.js";
-import { applyBaseline, loadBaseline } from "./baseline.js";
+import { applyBaseline, loadBaseline, renderBaseline } from "./baseline.js";
 import { meetsMin, severityRank } from "./severity.js";
 import { renderTerminal } from "./reporters/terminal.js";
 import { renderJson } from "./reporters/json.js";
@@ -69,8 +69,10 @@ ${pc.bold("Options")}
   --out <file>        write the report to a file instead of stdout
   --min-severity <s>  info | low | medium | high | critical  (default: low)
   --baseline <file>   suppress findings whose id is listed in this JSON file
+  --write-baseline <file>  snapshot all current finding ids into a baseline file
   --fail-on <s>       exit non-zero if any kept finding is >= this severity
-  --help, --version
+  --verbose           also list the config files that were scanned, per tool
+  --help (-h), --version (-v)
 `;
 
 function main(): void {
@@ -85,13 +87,18 @@ function main(): void {
         out: { type: "string" },
         "min-severity": { type: "string" },
         baseline: { type: "string" },
+        "write-baseline": { type: "string" },
         "fail-on": { type: "string" },
-        help: { type: "boolean" },
-        version: { type: "boolean" },
+        verbose: { type: "boolean" },
+        help: { type: "boolean", short: "h" },
+        version: { type: "boolean", short: "v" },
       },
     });
   } catch (e) {
-    die((e as Error).message);
+    // parseArgs errors carry Node-internal advice ("place it at the end of the
+    // command after '--'…") that reads like a bug — keep just the diagnosis.
+    const msg = (e as Error).message.split(". To specify")[0]!;
+    die(`${msg}. Run skopecreep --help for usage.`);
   }
   const { values, positionals } = parsed;
   if (values.version) {
@@ -106,6 +113,9 @@ function main(): void {
   const command = positionals[0] ?? "scan";
   const tools = parseTools(values.tool);
   const projectPath = path.resolve(values.path ?? process.cwd());
+  if (values.path && !isDir(projectPath)) {
+    die(`project path not found or not a directory: ${projectPath}`);
+  }
   const generatedAt = new Date().toISOString();
   const report = runAudit({ home: HOME, projectPath, tools, generatedAt });
 
@@ -131,9 +141,18 @@ function main(): void {
   const { kept, suppressed } = applyBaseline(report.findings, baseline);
   const display = kept.filter((f) => meetsMin(f.severity, minSeverity));
 
+  if (values["write-baseline"]) {
+    // Snapshot everything currently found (even already-suppressed findings),
+    // so the written file stands alone as the new baseline.
+    writeFileSync(values["write-baseline"], renderBaseline(report.findings));
+    process.stderr.write(
+      pc.dim(`wrote baseline (${report.findings.length} finding id${report.findings.length === 1 ? "" : "s"}) to ${values["write-baseline"]}\n`),
+    );
+  }
+
   const format = (values.format ?? "terminal").toLowerCase();
   let output: string;
-  const reporterArgs = { findings: display, suppressedCount: suppressed.length, minSeverity };
+  const reporterArgs = { findings: display, suppressedCount: suppressed.length, minSeverity, verbose: values.verbose ?? false };
   if (format === "json") {
     output = renderJson(report, reporterArgs);
   } else if (format === "terminal") {
@@ -146,7 +165,7 @@ function main(): void {
 
   if (values.out) {
     writeFileSync(values.out, output + "\n");
-    process.stderr.write(pc.dim(`wrote ${display.length} finding(s) to ${values.out}\n`));
+    process.stderr.write(pc.dim(`wrote ${display.length} finding${display.length === 1 ? "" : "s"} to ${values.out}\n`));
   } else {
     process.stdout.write(output + "\n");
   }
@@ -184,7 +203,11 @@ function runRedactCheck(report: ReturnType<typeof runAudit>, generatedAt: string
     process.stderr.write(pc.red(`redact-check FAILED: ${leaks.length} secret-shaped value(s) leaked into output (kinds: ${kinds})\n`));
     process.exit(3);
   }
-  process.stdout.write(pc.green(`redact-check OK — no secret-shaped values in rendered output (${report.findings.length} findings scanned).\n`));
+  process.stdout.write(
+    pc.green(
+      `redact-check OK — no secret-shaped values in rendered output (${report.findings.length} finding${report.findings.length === 1 ? "" : "s"} scanned).\n`,
+    ),
+  );
 }
 
 main();

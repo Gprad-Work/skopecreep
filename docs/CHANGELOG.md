@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `--write-baseline <file>` — snapshot all current finding ids into a baseline
+  file, so accepting today's findings no longer requires hand-extracting ids
+  from the JSON report
+- `--verbose` — the terminal report lists the config files each tool's
+  collector actually read, so a quiet result is auditable ("checked and
+  clean" vs "didn't look")
+- Claude Code collector now scans `~/.claude/.credentials.json` (plaintext
+  OAuth tokens on hosts without an OS keychain) as a credential at rest
+- `-h` / `-v` short flags for `--help` / `--version`
+
+### Changed
+- A `--path` that doesn't exist (or isn't a directory) is now a hard error
+  instead of silently scanning nothing project-side
+- Unknown-option errors no longer leak Node's internal parseArgs advice;
+  they point at `--help` instead
+- Pluralization fixes ("1 findings scanned"), and the zero-findings terminal
+  output now hints at `--min-severity info`
+
 ## [0.2.0] - 2026-07-11
 
 ### Added
