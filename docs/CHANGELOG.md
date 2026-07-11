@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0] - 2026-07-11
 
 ### Added
 - Every finding is now tagged with the [MITRE ATLAS](https://atlas.mitre.org/matrices/ATLAS)
@@ -36,6 +36,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - A hook that only re-invokes an agent no longer also raises the generic
   `lifecycle-hook` finding (the recursion finding covers it); it still raises
   both when the command is network-reaching/obfuscated.
+- A `--baseline` file that is missing, malformed, or the wrong shape is now a
+  hard error (exit 2) instead of being silently treated as "no baseline" — a
+  typo'd path in CI must not quietly change what gets suppressed.
+- `--version` now reads from package.json instead of a second hardcoded
+  constant that could drift.
+
+### Fixed
+- `npm pack` / `npm publish` now build first (`prepack` script). Previously a
+  publish from a clean checkout produced a tarball with no `dist/` — an empty,
+  broken package.
 
 ## [0.1.0] - 2026-07-02
 

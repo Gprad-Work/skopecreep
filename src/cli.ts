@@ -3,6 +3,7 @@
 import { parseArgs } from "node:util";
 import { writeFileSync } from "node:fs";
 import * as path from "node:path";
+import { createRequire } from "node:module";
 import pc from "picocolors";
 import { ALL_TOOL_IDS, type Severity, type ToolId } from "./model.js";
 import { HOME } from "./util.js";
@@ -14,7 +15,9 @@ import { renderJson } from "./reporters/json.js";
 import { renderHtml } from "./reporters/html.js";
 import { scanTextForSecrets } from "./secrets/patterns.js";
 
-const VERSION = "0.1.0";
+// Single source of truth for the version — package.json ships in every npm
+// tarball, and dist/cli.js sits one level below it.
+const VERSION: string = createRequire(import.meta.url)("../package.json").version;
 const SEVERITIES: Severity[] = ["info", "low", "medium", "high", "critical"];
 
 const TOOL_ALIASES: Record<string, ToolId> = {
@@ -119,7 +122,12 @@ function main(): void {
   if (command !== "scan") die(`unknown command "${command}". See --help.`);
 
   const minSeverity = parseSeverity(values["min-severity"], "low");
-  const baseline = loadBaseline(values.baseline);
+  let baseline;
+  try {
+    baseline = loadBaseline(values.baseline);
+  } catch (e) {
+    die((e as Error).message);
+  }
   const { kept, suppressed } = applyBaseline(report.findings, baseline);
   const display = kept.filter((f) => meetsMin(f.severity, minSeverity));
 
