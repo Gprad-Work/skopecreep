@@ -1,6 +1,9 @@
 # skopecreep
 
-
+[![CI](https://github.com/Gprad-Work/skopecreep/actions/workflows/ci.yml/badge.svg)](https://github.com/Gprad-Work/skopecreep/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/skopecreep)](https://www.npmjs.com/package/skopecreep)
+[![node](https://img.shields.io/node/v/skopecreep)](https://www.npmjs.com/package/skopecreep)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 A read-only CLI that audits the configuration and granted scope of your AI
 coding agents — Claude Code, Codex CLI, Cursor, Windsurf, Copilot, and generic
@@ -164,6 +167,21 @@ skopecreep on your own machine's configuration — they don't overlap.
   transcripts. Context/instruction files are read into memory for scanning and
   their bodies are never written to any report.
 
+### Don't take our word for it
+
+Every safety claim above is enforced as a build-failing test, not a promise:
+
+- **No network, provably.** [`test/no-network.test.ts`](test/no-network.test.ts)
+  fails the build if any shipped file imports a network-capable module
+  (`http`, `https`, `net`, `tls`, `dns`, …) or calls `fetch`/`WebSocket`. No
+  account, no token, no telemetry — there is no code that could send anything.
+- **No secret leaks, provably.** The integration suite renders a report from a
+  fixture full of planted secrets through *every* output format and asserts no
+  secret-shaped value survives; `skopecreep redact-check` runs the same check
+  against your real machine, locally.
+- **Four runtime dependencies**, each a parser or terminal-color helper —
+  pinned by the same test. Small enough to read in an afternoon.
+
 Found a security issue? See [docs/SECURITY.md](docs/SECURITY.md) —
 please don't file it as a public issue.
 
@@ -181,7 +199,8 @@ Architecture: `collectors → normalized model → detectors → severity → ba
 is one collector and adding a check is one detector. See `src/model.ts`.
 
 Want to contribute a collector or a detector? See
-[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
+[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). This project follows the
+[Contributor Covenant](docs/CODE_OF_CONDUCT.md).
 
 ## Roadmap
 
