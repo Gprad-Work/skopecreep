@@ -26,6 +26,15 @@ export function loadBaseline(path: string | undefined): Baseline {
   return { ignore: new Set(ids) };
 }
 
+/**
+ * Serialize findings into baseline JSON (the `{ "ignore": [...] }` shape),
+ * ids deduped and sorted so the file diffs cleanly under version control.
+ */
+export function renderBaseline(findings: Finding[]): string {
+  const ids = [...new Set(findings.map((f) => f.id))].sort();
+  return JSON.stringify({ ignore: ids }, null, 2) + "\n";
+}
+
 export function applyBaseline(
   findings: Finding[],
   baseline: Baseline,

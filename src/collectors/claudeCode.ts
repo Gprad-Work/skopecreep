@@ -12,7 +12,7 @@ import {
   readTextSafe,
 } from "../util.js";
 import { parseMcpMap } from "./mcpShared.js";
-import { makeContextSource } from "./shared.js";
+import { collectCredentialFromFile, makeContextSource } from "./shared.js";
 
 const TOOL = "claude-code" as const;
 
@@ -199,6 +199,15 @@ export const collectClaudeCode: Collector = (ctx, inv) => {
         });
       }
     }
+  }
+
+  // ~/.claude/.credentials.json — plaintext OAuth tokens on hosts where no
+  // OS keychain is available (Linux/headless).
+  const credPath = path.join(claudeDir, ".credentials.json");
+  if (fileExists(credPath)) {
+    configPaths.push(credPath);
+    const cred = collectCredentialFromFile(TOOL, credPath);
+    if (cred) inv.credentials.push(cred);
   }
 
   // Settings files (global + project).

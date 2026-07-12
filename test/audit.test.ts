@@ -62,6 +62,8 @@ beforeAll(() => {
   );
   write(".claude/projects/p/memory/leak.md", `Here is a key: ${AWS}\n`, 0o644);
   write(".claude/projects/p/memory/cloud.md", `Atlassian cloudId: ${CLOUD_ID}\nSome harmless notes.\n`);
+  // Plaintext OAuth token file (Linux/headless machines without a keychain).
+  write(".claude/.credentials.json", JSON.stringify({ claudeAiOauth: { accessToken: JWT } }), 0o600);
 
   // --- Cursor: unknown remote host + a secret in MCP env ---
   write(
@@ -105,6 +107,17 @@ describe("detection coverage", () => {
     }
   });
 
+  it("collects ~/.claude/.credentials.json as a Claude Code credential at rest", () => {
+    const cred = report.inventory.credentials.find(
+      (c) => c.tool === "claude-code" && c.path.endsWith(".credentials.json"),
+    );
+    expect(cred).toBeDefined();
+    const finding = report.findings.find(
+      (f) => f.ruleId === "secret-at-rest" && f.evidence.some((e) => e.path.endsWith(".credentials.json")),
+    );
+    expect(finding).toBeDefined();
+  });
+
   it("does NOT flag the known remote host (notion) or the UUID cloudId", () => {
     // No finding should point at the cloudId-only memory file.
     const touchesCloud = report.findings.some((f) => f.evidence.some((e) => e.path.endsWith("cloud.md")));
@@ -131,6 +144,18 @@ describe("calibration", () => {
   it("rates the malicious CLAUDE.md hidden-unicode finding at high or above", () => {
     const f = report.findings.find((x) => x.ruleId === "context-hidden-unicode");
     expect(["high", "critical"]).toContain(f?.severity);
+  });
+});
+
+describe("verbose inventory", () => {
+  it("lists the config files read per tool when verbose is set", () => {
+    const args = { findings: report.findings, suppressedCount: 0, minSeverity: "info" as const, verbose: true };
+    const out = renderTerminal(report, args);
+    // "      · <path>" lines only appear in verbose mode (finding evidence
+    // also mentions paths, so match the verbose line shape, not the filename)
+    expect(out).toContain(`      · ${path.join(home, ".claude", ".credentials.json")}`);
+    const quiet = renderTerminal(report, { ...args, verbose: false });
+    expect(quiet).not.toContain("      · ");
   });
 });
 

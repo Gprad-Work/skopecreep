@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { loadBaseline } from "../dist/baseline.js";
+import { loadBaseline, renderBaseline } from "../dist/baseline.js";
+import type { Finding } from "../dist/model.js";
 
 let dir: string;
 
@@ -52,5 +53,15 @@ describe("loadBaseline", () => {
   it("throws when the array contains non-string entries", () => {
     const p = write("mixed.json", '["ok", 42]');
     expect(() => loadBaseline(p)).toThrow(/baseline must be/);
+  });
+});
+
+describe("renderBaseline", () => {
+  it("round-trips through loadBaseline with sorted, deduped ids", () => {
+    const findings = [{ id: "bbb" }, { id: "aaa" }, { id: "bbb" }] as Finding[];
+    const p = write("written.json", renderBaseline(findings));
+    const loaded = loadBaseline(p);
+    expect([...loaded.ignore].sort()).toEqual(["aaa", "bbb"]);
+    expect(JSON.parse(fs.readFileSync(p, "utf8")).ignore).toEqual(["aaa", "bbb"]);
   });
 });
