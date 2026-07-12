@@ -1,8 +1,8 @@
 /** Config files that are group/world-writable — a config-tampering vector. */
 import type { Finding, ToolId } from "../model.js";
-import type { Detector } from "./types.js";
 import { computeSeverity } from "../severity.js";
 import { statInfo } from "../util.js";
+import type { Detector } from "./types.js";
 import { makeFindingId } from "./util.js";
 
 export const detectFileHygiene: Detector = (inv) => {

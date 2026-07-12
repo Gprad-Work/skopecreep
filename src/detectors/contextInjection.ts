@@ -6,13 +6,16 @@
  * so a human reviews rather than the tool asserting malice.
  */
 import type { ContextSource, Finding } from "../model.js";
-import type { Detector } from "./types.js";
-import { computeSeverity } from "../severity.js";
-import { makeFindingId } from "./util.js";
 import { evidenceSnippet } from "../secrets/redact.js";
+import { computeSeverity } from "../severity.js";
+import type { Detector } from "./types.js";
+import { makeFindingId } from "./util.js";
 
 const HIGH_PHRASES = [
-  { re: /do\s+not\s+(?:tell|inform|reveal\s+to|mention\s+to|notify)\s+the\s+user/i, name: "conceal an action from the user" },
+  {
+    re: /do\s+not\s+(?:tell|inform|reveal\s+to|mention\s+to|notify)\s+the\s+user/i,
+    name: "conceal an action from the user",
+  },
   { re: /exfiltrat/i, name: "exfiltration" },
   {
     re: /\b(?:send|post|upload|leak|forward)\b[^.\n]{0,50}\b(?:secrets?|credentials?|tokens?|api[\s_-]?keys?|\.env|environment variables?|private key)\b/i,
@@ -20,17 +23,20 @@ const HIGH_PHRASES = [
   },
 ];
 const MED_PHRASES = [
-  { re: /ignore\s+(?:all\s+|any\s+)?(?:the\s+)?(?:previous|prior|above|earlier)\s+(?:instructions|prompts?|messages?|rules?)/i, name: "override previous instructions" },
+  {
+    re: /ignore\s+(?:all\s+|any\s+)?(?:the\s+)?(?:previous|prior|above|earlier)\s+(?:instructions|prompts?|messages?|rules?)/i,
+    name: "override previous instructions",
+  },
   { re: /disregard\s+(?:the\s+|all\s+)?(?:above|previous|prior|earlier)\b/i, name: "disregard previous context" },
 ];
 
 // Regexes for invisible characters are built via RegExp() from escaped strings
 // so the SOURCE never contains an actual invisible/bidi character.
 // Bidirectional overrides (Trojan-Source): U+202A-U+202E, U+2066-U+2069.
-const BIDI = new RegExp("[\\u202A-\\u202E\\u2066-\\u2069]", "gu");
+const BIDI = /[\u202A-\u202E\u2066-\u2069]/gu;
 // Zero-width / invisible marks: U+200B, U+200C, U+200E, U+200F, U+2060-U+2064.
 // Excludes U+200D (ZWJ, used in emoji) and U+FEFF (BOM).
-const ZERO_WIDTH = new RegExp("[\\u200B\\u200C\\u200E\\u200F\\u2060-\\u2064]", "gu");
+const ZERO_WIDTH = /[\u200B\u200C\u200E\u200F\u2060-\u2064]/gu;
 const BASE64_BLOB = /[A-Za-z0-9+/]{200,}={0,2}/;
 const EXTERNAL_DEP =
   /(?:read|open|load|execute|run|source|include)\s+[`'"]?((?:\/|~\/|\.\.\/)[^\s`'"]+\.(?:ya?ml|sh|bash|zsh|py|js|ts|rb|json|toml))/i;

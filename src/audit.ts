@@ -1,7 +1,8 @@
 /** Top-level orchestration: collect inventory, run detectors, assemble report. */
-import type { AuditReport, ToolId } from "./model.js";
+
 import { collectAll } from "./collectors/index.js";
 import { runDetectors } from "./detectors/index.js";
+import type { AuditReport, ToolId } from "./model.js";
 
 export interface AuditOptions {
   home: string;

@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { looksLikeSecret, scanTextForSecrets } from "../dist/secrets/patterns.js";
-import { fingerprint, redactSecretsInText, assertNoSecretLeak } from "../dist/secrets/redact.js";
+import { assertNoSecretLeak, fingerprint, redactSecretsInText } from "../dist/secrets/redact.js";
 
 // Well-known example/fake values (not live secrets).
 const AWS = "AKIAIOSFODNN7EXAMPLE";

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { detectPermissions } from "../../dist/detectors/permissions.js";
 import { inv, src } from "./helpers.js";
 
@@ -42,7 +42,13 @@ describe("detectPermissions", () => {
     const findings = detectPermissions(
       inv({
         grants: [
-          { tool: "claude-code", kind: "permission-rule", value: "Bash(*)", scope: "deny", source: src("settings.json") },
+          {
+            tool: "claude-code",
+            kind: "permission-rule",
+            value: "Bash(*)",
+            scope: "deny",
+            source: src("settings.json"),
+          },
         ],
       }),
     );
@@ -53,7 +59,13 @@ describe("detectPermissions", () => {
     const findings = detectPermissions(
       inv({
         grants: [
-          { tool: "claude-code", kind: "permission-rule", value: "WebSearch", scope: "allow", source: src("settings.json") },
+          {
+            tool: "claude-code",
+            kind: "permission-rule",
+            value: "WebSearch",
+            scope: "allow",
+            source: src("settings.json"),
+          },
         ],
       }),
     );
@@ -63,7 +75,9 @@ describe("detectPermissions", () => {
   it("rates bypassPermissions mode higher than a lesser bypass value", () => {
     const [bypass] = detectPermissions(
       inv({
-        grants: [{ tool: "claude-code", kind: "bypass-mode", value: "bypassPermissions", source: src("settings.json") }],
+        grants: [
+          { tool: "claude-code", kind: "bypass-mode", value: "bypassPermissions", source: src("settings.json") },
+        ],
       }),
     );
     const [lesser] = detectPermissions(

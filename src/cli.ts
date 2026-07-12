@@ -1,19 +1,19 @@
 #!/usr/bin/env node
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import * as path from "node:path";
 /** skopecreep CLI. */
 import { parseArgs } from "node:util";
-import { writeFileSync } from "node:fs";
-import * as path from "node:path";
-import { createRequire } from "node:module";
 import pc from "picocolors";
-import { ALL_TOOL_IDS, type Severity, type ToolId } from "./model.js";
-import { HOME, isDir } from "./util.js";
 import { runAudit } from "./audit.js";
-import { applyBaseline, loadBaseline, renderBaseline } from "./baseline.js";
-import { meetsMin, severityRank } from "./severity.js";
-import { renderTerminal } from "./reporters/terminal.js";
-import { renderJson } from "./reporters/json.js";
+import { applyBaseline, type Baseline, loadBaseline, renderBaseline } from "./baseline.js";
+import type { Severity, ToolId } from "./model.js";
 import { renderHtml } from "./reporters/html.js";
+import { renderJson } from "./reporters/json.js";
+import { renderTerminal } from "./reporters/terminal.js";
 import { scanTextForSecrets } from "./secrets/patterns.js";
+import { meetsMin } from "./severity.js";
+import { HOME, isDir } from "./util.js";
 
 // Single source of truth for the version — package.json ships in every npm
 // tarball, and dist/cli.js sits one level below it.
@@ -35,7 +35,10 @@ const TOOL_ALIASES: Record<string, ToolId> = {
 function parseTools(raw: string | undefined): ToolId[] | undefined {
   if (!raw) return undefined;
   const out: ToolId[] = [];
-  for (const part of raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)) {
+  for (const part of raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)) {
     const id = TOOL_ALIASES[part];
     if (!id) die(`unknown tool "${part}". Valid: ${Object.keys(TOOL_ALIASES).join(", ")}`);
     if (!out.includes(id)) out.push(id);
@@ -76,6 +79,7 @@ ${pc.bold("Options")}
 `;
 
 function main(): void {
+  // biome-ignore lint/suspicious/noImplicitAnyLet: type is inferred from the parseArgs assignment below; annotating the generic return type here would only obscure it
   let parsed;
   try {
     parsed = parseArgs({
@@ -106,7 +110,7 @@ function main(): void {
     return;
   }
   if (values.help) {
-    process.stdout.write(USAGE + "\n");
+    process.stdout.write(`${USAGE}\n`);
     return;
   }
 
@@ -120,7 +124,7 @@ function main(): void {
   const report = runAudit({ home: HOME, projectPath, tools, generatedAt });
 
   if (command === "list-mcp") {
-    process.stdout.write(renderMcpList(report.inventory.mcpServers) + "\n");
+    process.stdout.write(`${renderMcpList(report.inventory.mcpServers)}\n`);
     return;
   }
 
@@ -132,7 +136,7 @@ function main(): void {
   if (command !== "scan") die(`unknown command "${command}". See --help.`);
 
   const minSeverity = parseSeverity(values["min-severity"], "low");
-  let baseline;
+  let baseline: Baseline;
   try {
     baseline = loadBaseline(values.baseline);
   } catch (e) {
@@ -146,13 +150,20 @@ function main(): void {
     // so the written file stands alone as the new baseline.
     writeFileSync(values["write-baseline"], renderBaseline(report.findings));
     process.stderr.write(
-      pc.dim(`wrote baseline (${report.findings.length} finding id${report.findings.length === 1 ? "" : "s"}) to ${values["write-baseline"]}\n`),
+      pc.dim(
+        `wrote baseline (${report.findings.length} finding id${report.findings.length === 1 ? "" : "s"}) to ${values["write-baseline"]}\n`,
+      ),
     );
   }
 
   const format = (values.format ?? "terminal").toLowerCase();
   let output: string;
-  const reporterArgs = { findings: display, suppressedCount: suppressed.length, minSeverity, verbose: values.verbose ?? false };
+  const reporterArgs = {
+    findings: display,
+    suppressedCount: suppressed.length,
+    minSeverity,
+    verbose: values.verbose ?? false,
+  };
   if (format === "json") {
     output = renderJson(report, reporterArgs);
   } else if (format === "terminal") {
@@ -164,10 +175,12 @@ function main(): void {
   }
 
   if (values.out) {
-    writeFileSync(values.out, output + "\n");
-    process.stderr.write(pc.dim(`wrote ${display.length} finding${display.length === 1 ? "" : "s"} to ${values.out}\n`));
+    writeFileSync(values.out, `${output}\n`);
+    process.stderr.write(
+      pc.dim(`wrote ${display.length} finding${display.length === 1 ? "" : "s"} to ${values.out}\n`),
+    );
   } else {
-    process.stdout.write(output + "\n");
+    process.stdout.write(`${output}\n`);
   }
 
   const failOn = values["fail-on"] ? parseSeverity(values["fail-on"], "critical") : null;
@@ -176,31 +189,43 @@ function main(): void {
   }
 }
 
-function renderMcpList(servers: { tool: string; name: string; transport: string; command?: string; args?: string[]; url?: string; pinned?: boolean; hasSecretInEnv: boolean }[]): string {
+function renderMcpList(
+  servers: {
+    tool: string;
+    name: string;
+    transport: string;
+    command?: string;
+    args?: string[];
+    url?: string;
+    pinned?: boolean;
+    hasSecretInEnv: boolean;
+  }[],
+): string {
   if (servers.length === 0) return pc.dim("No MCP servers configured across scanned tools.");
   const lines = [pc.bold("MCP servers")];
   for (const s of servers.sort((a, b) => a.tool.localeCompare(b.tool) || a.name.localeCompare(b.name))) {
-    const target = s.transport === "stdio" ? `${s.command ?? ""} ${(s.args ?? []).join(" ")}`.trim() : s.url ?? "";
-    const flags = [
-      s.pinned === false ? pc.yellow("unpinned") : "",
-      s.hasSecretInEnv ? pc.red("secret-in-env") : "",
-    ].filter(Boolean).join(" ");
+    const target = s.transport === "stdio" ? `${s.command ?? ""} ${(s.args ?? []).join(" ")}`.trim() : (s.url ?? "");
+    const flags = [s.pinned === false ? pc.yellow("unpinned") : "", s.hasSecretInEnv ? pc.red("secret-in-env") : ""]
+      .filter(Boolean)
+      .join(" ");
     lines.push(`  ${pc.cyan(s.tool)}/${pc.bold(s.name)} ${pc.dim(`[${s.transport}]`)} ${target} ${flags}`.trimEnd());
   }
   return lines.join("\n");
 }
 
-function runRedactCheck(report: ReturnType<typeof runAudit>, generatedAt: string): void {
+function runRedactCheck(report: ReturnType<typeof runAudit>, _generatedAt: string): void {
   // Render everything at the most verbose settings and confirm no raw secret
   // signature survives into the output.
   const all = report.findings;
   const json = renderJson(report, { findings: all, suppressedCount: 0, minSeverity: "info" });
   const term = renderTerminal(report, { findings: all, suppressedCount: 0, minSeverity: "info" });
-  const combined = json + "\n" + term;
+  const combined = `${json}\n${term}`;
   const leaks = scanTextForSecrets(combined);
   if (leaks.length > 0) {
     const kinds = [...new Set(leaks.map((l) => l.kind))].join(", ");
-    process.stderr.write(pc.red(`redact-check FAILED: ${leaks.length} secret-shaped value(s) leaked into output (kinds: ${kinds})\n`));
+    process.stderr.write(
+      pc.red(`redact-check FAILED: ${leaks.length} secret-shaped value(s) leaked into output (kinds: ${kinds})\n`),
+    );
     process.exit(3);
   }
   process.stdout.write(

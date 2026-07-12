@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { detectAllowlist } from "../../dist/detectors/allowlist.js";
 import { inv, src } from "./helpers.js";
 
@@ -30,7 +30,12 @@ describe("detectAllowlist", () => {
     const constrained = detectAllowlist(
       inv({
         grants: [
-          { tool: "codex", kind: "allowlist-cmd", value: "curl https://api.example.com/v1/data", source: src("rules.txt") },
+          {
+            tool: "codex",
+            kind: "allowlist-cmd",
+            value: "curl https://api.example.com/v1/data",
+            source: src("rules.txt"),
+          },
         ],
       }),
     );

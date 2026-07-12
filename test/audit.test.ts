@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runAudit } from "../dist/audit.js";
+import { renderHtml } from "../dist/reporters/html.js";
 import { renderJson } from "../dist/reporters/json.js";
 import { renderTerminal } from "../dist/reporters/terminal.js";
-import { renderHtml } from "../dist/reporters/html.js";
 import { scanTextForSecrets } from "../dist/secrets/patterns.js";
 import { assertNoSecretLeak } from "../dist/secrets/redact.js";
 

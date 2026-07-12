@@ -1,5 +1,5 @@
-import { sha256, statInfo, isInVcsOrSyncedDir } from "../util.js";
 import type { Dim } from "../severity.js";
+import { isInVcsOrSyncedDir, sha256, statInfo } from "../util.js";
 
 /** Stable id for baselining: same finding across runs → same id. */
 export function makeFindingId(ruleId: string, parts: string[]): string {

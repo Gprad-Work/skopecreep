@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import * as os from "node:os";
 import * as path from "node:path";
+import { describe, expect, it } from "vitest";
 import { detectTrust } from "../../dist/detectors/trust.js";
 import { inv, src } from "./helpers.js";
 

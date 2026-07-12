@@ -57,13 +57,7 @@ export function maxSeverity(a: Severity, b: Severity): Severity {
   return RANK[a] >= RANK[b] ? a : b;
 }
 
-export const SEVERITY_ORDER: Severity[] = [
-  "critical",
-  "high",
-  "medium",
-  "low",
-  "info",
-];
+export const SEVERITY_ORDER: Severity[] = ["critical", "high", "medium", "low", "info"];
 
 /**
  * Map a credential file's on-disk situation to an exposure dimension. This is

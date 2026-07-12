@@ -2,17 +2,10 @@
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { Inventory, Tool } from "../model.js";
-import type { Collector } from "./types.js";
-import {
-  fileExists,
-  isDir,
-  listDir,
-  parseJsonSafe,
-  parseJsoncSafe,
-  readTextSafe,
-} from "../util.js";
+import { fileExists, isDir, listDir, parseJsoncSafe, parseJsonSafe, readTextSafe } from "../util.js";
 import { parseMcpMap } from "./mcpShared.js";
 import { collectCredentialFromFile, makeContextSource } from "./shared.js";
+import type { Collector } from "./types.js";
 
 const TOOL = "claude-code" as const;
 
@@ -35,17 +28,16 @@ function parseGrantedTools(text: string): { name?: string; tools: string[] } {
   const name = typeof data?.name === "string" ? data.name : undefined;
   let tools = data?.tools as unknown;
   if (typeof tools === "string") {
-    tools = tools.split(",").map((s) => s.trim()).filter(Boolean);
+    tools = tools
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   return { name, tools: Array.isArray(tools) ? (tools as string[]) : [] };
 }
 
 /** Pull permissions, hooks and mode out of a settings object. */
-function processSettings(
-  settings: Record<string, unknown> | null,
-  sourcePath: string,
-  inv: Inventory,
-): void {
+function processSettings(settings: Record<string, unknown> | null, sourcePath: string, inv: Inventory): void {
   if (!settings) return;
   const perms = settings.permissions as Record<string, unknown> | undefined;
   const buckets: Array<"allow" | "ask" | "deny"> = ["allow", "ask", "deny"];
@@ -65,9 +57,7 @@ function processSettings(
     }
   }
 
-  const mode =
-    (perms?.defaultMode as string | undefined) ??
-    (settings.defaultMode as string | undefined);
+  const mode = (perms?.defaultMode as string | undefined) ?? (settings.defaultMode as string | undefined);
   if (mode === "bypassPermissions" || mode === "acceptEdits") {
     inv.grants.push({
       tool: TOOL,
@@ -95,7 +85,12 @@ function processSettings(
         for (const h of list) {
           const cmd = (h as Record<string, unknown>)?.command;
           if (typeof cmd === "string") {
-            inv.hooks.push({ tool: TOOL, event, command: cmd, source: { path: sourcePath, locator: `hooks.${event}` } });
+            inv.hooks.push({
+              tool: TOOL,
+              event,
+              command: cmd,
+              source: { path: sourcePath, locator: `hooks.${event}` },
+            });
           }
         }
       }

@@ -100,6 +100,7 @@ export function scanTextForSecrets(text: string): SecretMatch[] {
   for (const sig of SIGNATURES) {
     const re = new RegExp(sig.regex.source, "g");
     let m: RegExpExecArray | null;
+    // biome-ignore lint/suspicious/noAssignInExpressions: standard exec-loop idiom for global regexes
     while ((m = re.exec(text)) !== null) {
       found.push({
         isSecret: true,

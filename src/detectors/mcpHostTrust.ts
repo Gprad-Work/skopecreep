@@ -1,7 +1,7 @@
 /** MCP exposure: remote servers on unknown (non-mainstream) hosts or plain-HTTP transport. */
 import type { Finding } from "../model.js";
-import type { Detector } from "./types.js";
 import { computeSeverity } from "../severity.js";
+import type { Detector } from "./types.js";
 import { makeFindingId } from "./util.js";
 
 /** Widely-used, first-party SaaS MCP hosts. Matched by exact or suffix. */
@@ -32,7 +32,7 @@ const KNOWN_HOSTS = [
 
 function isKnownHost(host: string): boolean {
   const h = host.toLowerCase();
-  return KNOWN_HOSTS.some((k) => h === k || h.endsWith("." + k));
+  return KNOWN_HOSTS.some((k) => h === k || h.endsWith(`.${k}`));
 }
 
 function isLoopback(host: string): boolean {

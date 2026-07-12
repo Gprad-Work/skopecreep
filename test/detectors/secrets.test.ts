@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { detectSecrets } from "../../dist/detectors/secrets.js";
+import type { ContextSource, CredentialAtRest, MCPServer } from "../../dist/model.js";
 import { inv, src } from "./helpers.js";
-import type { CredentialAtRest, MCPServer, ContextSource } from "../../dist/model.js";
 
 const AWS = "AKIAIOSFODNN7EXAMPLE";
 
@@ -71,9 +71,7 @@ describe("detectSecrets — MCP env", () => {
   });
 
   it("does not flag an MCP server with no secret in env", () => {
-    const findings = detectSecrets(
-      inv({ mcpServers: [mcpServer({ hasSecretInEnv: false, secretEnvKeys: [] })] }),
-    );
+    const findings = detectSecrets(inv({ mcpServers: [mcpServer({ hasSecretInEnv: false, secretEnvKeys: [] })] }));
     expect(findings.some((f) => f.ruleId === "secret-in-mcp-env")).toBe(false);
   });
 });

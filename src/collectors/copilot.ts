@@ -1,9 +1,9 @@
 /** Collector for GitHub Copilot (~/.copilot, .github/copilot-instructions.md). */
 import * as path from "node:path";
 import type { Tool } from "../model.js";
-import type { Collector } from "./types.js";
 import { fileExists, isDir } from "../util.js";
 import { makeContextSource } from "./shared.js";
+import type { Collector } from "./types.js";
 
 const TOOL = "copilot" as const;
 

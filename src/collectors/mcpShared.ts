@@ -1,35 +1,13 @@
 /** Shared MCP-server parsing used by several collectors. */
 import * as path from "node:path";
-import type { MCPServer, ToolId, SourceRef } from "../model.js";
+import type { MCPServer, SourceRef, ToolId } from "../model.js";
 import { looksLikeSecret } from "../secrets/patterns.js";
 import { urlHost } from "../util.js";
 
 /** Package runners whose first positional arg is the package being executed. */
-const RUNNERS = new Set([
-  "npx",
-  "pnpx",
-  "bunx",
-  "uvx",
-  "pipx",
-  "uv",
-  "npm",
-  "pnpm",
-  "yarn",
-  "bun",
-]);
+const RUNNERS = new Set(["npx", "pnpx", "bunx", "uvx", "pipx", "uv", "npm", "pnpm", "yarn", "bun"]);
 
-const RUNNER_SKIP = new Set([
-  "-y",
-  "--yes",
-  "run",
-  "tool",
-  "exec",
-  "x",
-  "dlx",
-  "--",
-  "-q",
-  "--quiet",
-]);
+const RUNNER_SKIP = new Set(["-y", "--yes", "run", "tool", "exec", "x", "dlx", "--", "-q", "--quiet"]);
 
 export interface PackageInfo {
   packageSpec?: string;

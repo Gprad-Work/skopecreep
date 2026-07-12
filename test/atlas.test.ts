@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { ATLAS_TECHNIQUES, RULE_ATLAS_MAP, atlasForRule } from "../dist/atlas.js";
-import { runAudit } from "../dist/audit.js";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import { ATLAS_TECHNIQUES, atlasForRule, RULE_ATLAS_MAP } from "../dist/atlas.js";
+import { runAudit } from "../dist/audit.js";
 
 const detectorsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "dist", "detectors");
 
@@ -49,7 +49,10 @@ describe("ATLAS mapping", () => {
     const declared = allKnownRuleIds();
     expect(declared.size).toBeGreaterThan(0);
     for (const ruleId of declared) {
-      expect(RULE_ATLAS_MAP[ruleId], `${ruleId} is emitted by a detector but missing from RULE_ATLAS_MAP`).toBeDefined();
+      expect(
+        RULE_ATLAS_MAP[ruleId],
+        `${ruleId} is emitted by a detector but missing from RULE_ATLAS_MAP`,
+      ).toBeDefined();
     }
   });
 });
