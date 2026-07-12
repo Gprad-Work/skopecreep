@@ -27,6 +27,19 @@ Out of scope:
 - Issues in the underlying AI tools themselves (Claude Code, Codex CLI, Cursor, Windsurf, Copilot) — report those to the respective vendor
 - General false positives or missing detector coverage for new attack patterns — open a regular GitHub issue for those
 
+## Verifying releases
+
+From `v0.3.1` onward, every version published to npm is built and published
+by GitHub Actions using npm **trusted publishing (OIDC)** and carries a
+[provenance attestation](https://docs.npmjs.com/generating-provenance-statements)
+linking the tarball to the exact commit and workflow run that produced it.
+
+To verify:
+- the npm package page shows a provenance badge per version, or
+- in a project that depends on skopecreep, run `npm audit signatures`.
+
+Versions `0.3.0` and earlier were published manually and carry no attestation.
+
 ## Using skopecreep safely
 
 - It's **read-only** — it never writes to, or modifies, any tool's configuration

@@ -1,0 +1,84 @@
+name: Release
+
+# Tag push (v0.3.0, v1.2.3, …) → full CI matrix → npm publish with OIDC
+# provenance → GitHub Release with notes from docs/CHANGELOG.md.
+#
+# Rehearse without publishing: Actions → Release → Run workflow (dry-run).
+# One-time setup required on npmjs.com and GitHub — see docs/RELEASING.md.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Run everything but publish with --dry-run"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write # OIDC trusted publishing — no npm token anywhere
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      # OIDC trusted publishing needs npm >= 11.5.1; runners may bundle older.
+      - run: npm install -g npm@latest
+      - name: Guard - tag must match package.json version
+        if: github.event_name == 'push'
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Tag v$TAG does not match package.json version $PKG" >&2
+            exit 1
+          fi
+      - run: npm ci
+      - name: Publish
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry-run }}" = "true" ]; then
+            npm publish --provenance --access public --dry-run
+          else
+            npm publish --provenance --access public
+          fi
+
+  github-release:
+    if: github.event_name == 'push'
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Extract changelog section for this version
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const version = process.env.GITHUB_REF_NAME.replace(/^v/, "");
+            const lines = fs.readFileSync("docs/CHANGELOG.md", "utf8").split("\n");
+            const start = lines.findIndex((l) => l.startsWith(`## [${version}]`));
+            if (start === -1) { console.error(`No CHANGELOG section for ${version}`); process.exit(1); }
+            let end = lines.length;
+            for (let i = start + 1; i < lines.length; i++) {
+              if (lines[i].startsWith("## [")) { end = i; break; }
+            }
+            fs.writeFileSync("release-notes.md", lines.slice(start + 1, end).join("\n").trim() + "\n");
+          '
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md
