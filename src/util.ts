@@ -11,7 +11,13 @@ export const IS_WINDOWS = process.platform === "win32";
 /** Expand a leading `~` to the user's home directory. */
 export function expandHome(p: string): string {
   if (p === "~") return HOME;
-  if (p.startsWith("~/")) return path.join(HOME, p.slice(2));
+  if (p.startsWith("~/")) {
+    const userInput = p.slice(2);
+    if (userInput.includes("..") || path.isAbsolute(userInput)) {
+      throw new Error("Invalid path");
+    }
+    return path.join(HOME, userInput);
+  }
   return p;
 }
 
@@ -33,6 +39,7 @@ export function isDir(p: string): boolean {
 
 export function readTextSafe(p: string): string | null {
   try {
+    if (p.includes('..') || path.isAbsolute(p)) return null;
     return fs.readFileSync(p, "utf8");
   } catch {
     return null;
@@ -93,6 +100,7 @@ const SYNC_DIR_MARKERS = [
  * directory — either raises the exposure of any secret found there.
  */
 export function isInVcsOrSyncedDir(p: string): boolean {
+  if (p.includes('..') || path.isAbsolute(p)) return false;
   const abs = path.resolve(p);
   for (const marker of SYNC_DIR_MARKERS) {
     if (abs.includes(marker)) return true;
@@ -129,11 +137,15 @@ export function walk(root: string, opts: WalkOpts): string[] {
     }
     for (const e of entries) {
       const full = path.join(dir, e.name);
+      const resolvedRoot = path.resolve(root);
+      const resolvedFull = path.resolve(full);
+      const relative = path.relative(resolvedRoot, resolvedFull);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) continue;
       if (e.isDirectory()) {
         if (opts.skipDirs.has(e.name) || e.name.startsWith(".git")) continue;
-        visit(full, depth + 1);
+        visit(resolvedFull, depth + 1);
       } else if (e.isFile() && opts.match(e.name)) {
-        out.push(full);
+        out.push(resolvedFull);
       }
     }
   };
