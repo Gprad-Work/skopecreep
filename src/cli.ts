@@ -10,6 +10,7 @@ import { applyBaseline, type Baseline, loadBaseline, renderBaseline } from "./ba
 import type { Severity, ToolId } from "./model.js";
 import { renderHtml } from "./reporters/html.js";
 import { renderJson } from "./reporters/json.js";
+import { renderSarif } from "./reporters/sarif.js";
 import { renderTerminal } from "./reporters/terminal.js";
 import { scanTextForSecrets } from "./secrets/patterns.js";
 import { meetsMin } from "./severity.js";
@@ -68,7 +69,7 @@ ${pc.bold("Usage")}
 ${pc.bold("Options")}
   --tool <a,b>        limit to tools: claude, codex, cursor, windsurf, copilot, generic
   --path <dir>        project dir to scan for project-scoped config (default: cwd)
-  --format <fmt>      terminal | json | html  (default: terminal)
+  --format <fmt>      terminal | json | html | sarif  (default: terminal)
   --out <file>        write the report to a file instead of stdout
   --min-severity <s>  info | low | medium | high | critical  (default: low)
   --baseline <file>   suppress findings whose id is listed in this JSON file
@@ -170,8 +171,10 @@ function main(): void {
     output = renderTerminal(report, reporterArgs);
   } else if (format === "html") {
     output = renderHtml(report, reporterArgs);
+  } else if (format === "sarif") {
+    output = renderSarif(report, { ...reporterArgs, projectPath });
   } else {
-    die(`unknown format "${format}". Valid: terminal, json, html`);
+    die(`unknown format "${format}". Valid: terminal, json, html, sarif`);
   }
 
   if (values.out) {
@@ -219,7 +222,8 @@ function runRedactCheck(report: ReturnType<typeof runAudit>, _generatedAt: strin
   const all = report.findings;
   const json = renderJson(report, { findings: all, suppressedCount: 0, minSeverity: "info" });
   const term = renderTerminal(report, { findings: all, suppressedCount: 0, minSeverity: "info" });
-  const combined = `${json}\n${term}`;
+  const sarif = renderSarif(report, { findings: all, suppressedCount: 0, minSeverity: "info" });
+  const combined = `${json}\n${term}\n${sarif}`;
   const leaks = scanTextForSecrets(combined);
   if (leaks.length > 0) {
     const kinds = [...new Set(leaks.map((l) => l.kind))].join(", ");

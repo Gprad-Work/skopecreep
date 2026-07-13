@@ -14,6 +14,10 @@ export function renderJson(report: AuditReport, opts: JsonOptions): string {
   const contextSources = inv.contextSources.map(({ content, ...rest }) => rest);
 
   const out = {
+    // Contract signal for machine consumers: additive changes never bump
+    // this; breaking shape changes do (see "Output schema stability" in the
+    // README — the 0.2.0 remediation string→object break is the precedent).
+    schemaVersion: 1,
     tool: "skopecreep",
     generatedAt: report.generatedAt,
     host: report.host,

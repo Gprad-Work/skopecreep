@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.3.0] - 2026-07-13
 
 ### Added
+- **SARIF 2.1.0 output** (`--format sarif`) for GitHub code scanning: severity
+  mapped to level + `security-severity`, graded fixes in rule help, ATLAS
+  technique tags, stable finding ids as `partialFingerprints`, project-scoped
+  evidence relativized so alerts annotate files
+- **Composite GitHub Action** (`Gprad-Work/skopecreep@<tag>`) wrapping a
+  pinned `npx skopecreep` run with `report-file`/`findings-count` outputs;
+  dogfooded in this repo's own CI with SARIF upload
+- **`schemaVersion: 1`** in JSON output plus a published JSON Schema
+  (`schema/skopecreep-report.v1.schema.json`) and a documented stability
+  policy (additive never bumps; breaking bumps + CHANGELOG callout)
 - **"Don't take our word for it" guarantees enforced in CI**: a build-failing
   test asserts no shipped file imports a network-capable module or calls
   `fetch`/`WebSocket`, and pins the runtime-dependency list — the no-network /

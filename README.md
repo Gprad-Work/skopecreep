@@ -55,6 +55,7 @@ skopecreep                          # scan everything, human-readable report
 skopecreep scan --tool codex,cursor # limit to specific tools
 skopecreep scan --format json --out report.json
 skopecreep scan --format html --out report.html   # shareable dossier-style report
+skopecreep scan --format sarif --out skopecreep.sarif   # GitHub code scanning
 skopecreep scan --min-severity medium
 skopecreep scan --fail-on high      # non-zero exit for CI gating
 skopecreep scan --write-baseline .skopecreep-baseline.json   # accept current findings
@@ -70,7 +71,7 @@ Options:
 | --- | --- |
 | `--tool <a,b>` | Limit to `claude`, `codex`, `cursor`, `windsurf`, `copilot`, `generic` |
 | `--path <dir>` | Project dir to scan for project-scoped config (default: cwd) |
-| `--format <fmt>` | `terminal` (default), `json`, or `html` (self-contained report) |
+| `--format <fmt>` | `terminal` (default), `json`, `html` (self-contained report), or `sarif` (code scanning) |
 | `--out <file>` | Write the report to a file instead of stdout |
 | `--min-severity <s>` | `info` \| `low` \| `medium` \| `high` \| `critical` (default `low`) |
 | `--baseline <file>` | Suppress findings whose id is listed in this JSON file |
@@ -87,6 +88,53 @@ finding ids or `{ "ignore": ["<id>", …] }`. Finding ids are stable across
 runs, so a triaged finding stays suppressed until the underlying config
 changes. A baseline file that is missing or malformed is a hard error, not a
 silent no-op.
+
+### CI integration
+
+GitHub Actions — the bundled action scans the runner + checkout and feeds
+GitHub code scanning:
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+steps:
+  - uses: actions/checkout@v4
+  - id: scan
+    uses: Gprad-Work/skopecreep@v0.3.0
+    with:
+      fail-on: "" # upload first, gate later (or set: high)
+  - uses: github/codeql-action/upload-sarif@v3
+    with:
+      sarif_file: ${{ steps.scan.outputs.report-file }}
+```
+
+Findings then appear in the repo's **Security → Code scanning** tab, with
+severity, graded fixes, and ATLAS technique tags. To hard-gate instead, set
+`fail-on: high` (exit code 1 fails the job).
+
+Any other CI (GitLab example):
+
+```yaml
+agent-audit:
+  image: node:22
+  script:
+    - npx --yes skopecreep@0.3.0 scan --format json --out skopecreep.json --fail-on high
+  artifacts:
+    paths: [skopecreep.json]
+    when: always
+```
+
+### Output schema stability
+
+JSON output carries a top-level `schemaVersion` (currently `1`), with a
+machine contract in
+[`schema/skopecreep-report.v1.schema.json`](schema/skopecreep-report.v1.schema.json)
+that the test suite validates against. Policy: **additive** changes (new
+fields, new rules) never bump `schemaVersion`; **breaking** shape changes bump
+it and are called out in the CHANGELOG (the 0.2.0 change of
+`finding.remediation` from string to object is the precedent this policy
+exists to prevent repeating unannounced). SARIF output follows SARIF 2.1.0.
 
 ## What it checks
 
@@ -204,11 +252,14 @@ Want to contribute a collector or a detector? See
 
 ## Roadmap
 
+- ~~SARIF output + a GitHub Action~~ — shipped (see [CI integration](#ci-integration)).
+- **Creep detection** — diff the current posture against a previous snapshot
+  and flag *new* grants/servers/hooks since the last audit.
 - Call-history analysis (Codex SQLite logs, Claude transcripts) — report which
   tools/MCP calls were actually made, not just what's configured.
-- SARIF output + a GitHub Action.
 - Live MCP OAuth **scope** introspection.
 - More tools (aider, continue, gemini, zed).
+- OWASP Agentic AI / MCP Top 10 mappings alongside ATLAS.
 - Single static binary distribution (Go) for a runtime-free install.
 
 ## License
