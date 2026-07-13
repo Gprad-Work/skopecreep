@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.3.0] - 2026-07-13
 
 ### Added
+- **Creep detection** — `--write-snapshot <file>` records the machine's
+  posture (finding ids + every granted capability: permission rules, MCP
+  servers, hooks, credentials); `--diff <snapshot>` reports exactly what's
+  new since, and `--fail-on-new` turns a cron/CI run into a tripwire that
+  stays silent until the posture actually changes
 - **SARIF 2.1.0 output** (`--format sarif`) for GitHub code scanning: severity
   mapped to level + `security-severity`, graded fixes in rule help, ATLAS
   technique tags, stable finding ids as `partialFingerprints`, project-scoped

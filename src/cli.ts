@@ -7,6 +7,7 @@ import { parseArgs } from "node:util";
 import pc from "picocolors";
 import { runAudit } from "./audit.js";
 import { applyBaseline, type Baseline, loadBaseline, renderBaseline } from "./baseline.js";
+import { type Creep, diffSnapshot, loadSnapshot, renderSnapshot } from "./diff.js";
 import type { Severity, ToolId } from "./model.js";
 import { renderHtml } from "./reporters/html.js";
 import { renderJson } from "./reporters/json.js";
@@ -74,6 +75,9 @@ ${pc.bold("Options")}
   --min-severity <s>  info | low | medium | high | critical  (default: low)
   --baseline <file>   suppress findings whose id is listed in this JSON file
   --write-baseline <file>  snapshot all current finding ids into a baseline file
+  --write-snapshot <file>  record current posture (findings + granted surface) for --diff
+  --diff <snapshot>   report creep: findings/grants/servers/hooks NEW since the snapshot
+  --fail-on-new       with --diff: exit non-zero if anything new appeared
   --fail-on <s>       exit non-zero if any kept finding is >= this severity
   --verbose           also list the config files that were scanned, per tool
   --help (-h), --version (-v)
@@ -93,6 +97,9 @@ function main(): void {
         "min-severity": { type: "string" },
         baseline: { type: "string" },
         "write-baseline": { type: "string" },
+        "write-snapshot": { type: "string" },
+        diff: { type: "string" },
+        "fail-on-new": { type: "boolean" },
         "fail-on": { type: "string" },
         verbose: { type: "boolean" },
         help: { type: "boolean", short: "h" },
@@ -146,6 +153,20 @@ function main(): void {
   const { kept, suppressed } = applyBaseline(report.findings, baseline);
   const display = kept.filter((f) => meetsMin(f.severity, minSeverity));
 
+  if (values["write-snapshot"]) {
+    writeFileSync(values["write-snapshot"], renderSnapshot(report));
+    process.stderr.write(pc.dim(`wrote posture snapshot to ${values["write-snapshot"]}\n`));
+  }
+
+  let creep: Creep | null = null;
+  if (values.diff) {
+    try {
+      creep = diffSnapshot(report, loadSnapshot(values.diff));
+    } catch (e) {
+      die((e as Error).message);
+    }
+  }
+
   if (values["write-baseline"]) {
     // Snapshot everything currently found (even already-suppressed findings),
     // so the written file stands alone as the new baseline.
@@ -186,10 +207,37 @@ function main(): void {
     process.stdout.write(`${output}\n`);
   }
 
+  if (creep) {
+    process.stdout.write(`${renderCreep(creep)}\n`);
+    if (values["fail-on-new"] && (creep.newFindings.length > 0 || creep.newInventoryKeys.length > 0)) {
+      process.exitCode = 1;
+    }
+  }
+
   const failOn = values["fail-on"] ? parseSeverity(values["fail-on"], "critical") : null;
   if (failOn && kept.some((f) => meetsMin(f.severity, failOn))) {
     process.exitCode = 1;
   }
+}
+
+function renderCreep(creep: Creep): string {
+  const L: string[] = [];
+  const clean = creep.newFindings.length === 0 && creep.newInventoryKeys.length === 0;
+  L.push(pc.bold(`Creep since ${creep.since}`));
+  if (clean) {
+    L.push(pc.green("  Nothing new — posture unchanged."));
+  } else {
+    for (const f of creep.newFindings) {
+      L.push(`  ${pc.red("+ finding")} [${f.severity}] ${f.title}`);
+    }
+    for (const k of creep.newInventoryKeys) {
+      L.push(`  ${pc.yellow("+ granted")} ${k}`);
+    }
+  }
+  for (const k of creep.removedInventoryKeys) {
+    L.push(pc.dim(`  - removed ${k}`));
+  }
+  return L.join("\n");
 }
 
 function renderMcpList(

@@ -22,7 +22,7 @@ npx skopecreep
 - [Usage](#usage)
 - [What it checks](#what-it-checks)
 - [Why](#why)
-- [skopecreep vs mcp-scan](#skopecreep-vs-mcp-scan)
+- [skopecreep vs server scanners](#skopecreep-vs-server-scanners)
 - [Safety](#safety)
 - [Development](#development)
 - [Roadmap](#roadmap)
@@ -60,6 +60,8 @@ skopecreep scan --min-severity medium
 skopecreep scan --fail-on high      # non-zero exit for CI gating
 skopecreep scan --write-baseline .skopecreep-baseline.json   # accept current findings
 skopecreep scan --baseline .skopecreep-baseline.json         # …and stay quiet about them
+skopecreep scan --write-snapshot .skopecreep-snapshot.json   # record posture
+skopecreep scan --diff .skopecreep-snapshot.json --fail-on-new  # what crept in since?
 skopecreep scan --verbose           # also list the config files scanned per tool
 skopecreep list-mcp                 # quick MCP-server inventory across tools
 skopecreep redact-check             # self-test: assert no secret leaks into output
@@ -76,6 +78,9 @@ Options:
 | `--min-severity <s>` | `info` \| `low` \| `medium` \| `high` \| `critical` (default `low`) |
 | `--baseline <file>` | Suppress findings whose id is listed in this JSON file |
 | `--write-baseline <file>` | Snapshot all current finding ids into a baseline file |
+| `--write-snapshot <file>` | Record current posture (findings + granted surface) for `--diff` |
+| `--diff <snapshot>` | Report creep: what's new since the snapshot |
+| `--fail-on-new` | With `--diff`: exit non-zero if anything new appeared |
 | `--fail-on <s>` | Exit non-zero if any kept finding is at/above this severity |
 | `--verbose` | Also list the config files each tool's collector read |
 
@@ -88,6 +93,23 @@ finding ids or `{ "ignore": ["<id>", …] }`. Finding ids are stable across
 runs, so a triaged finding stays suppressed until the underlying config
 changes. A baseline file that is missing or malformed is a hard error, not a
 silent no-op.
+
+### Creep detection
+
+The tool's namesake: record today's posture, then let any later scan tell you
+exactly what got granted since.
+
+```bash
+skopecreep scan --write-snapshot .skopecreep-snapshot.json   # record posture
+# …days later, or nightly in cron/CI:
+skopecreep scan --diff .skopecreep-snapshot.json --fail-on-new
+```
+
+The creep report lists findings and granted surface (permission rules, MCP
+servers, hooks, credentials) that are **new since the snapshot** — a broad
+rule added by a tool update, an MCP server a cloned repo slipped in, a hook
+you don't remember approving. `--fail-on-new` exits non-zero when anything
+appeared, so a scheduled job stays silent until the posture actually changes.
 
 ### CI integration
 
@@ -189,20 +211,23 @@ non-secret UUID, a first-party SaaS MCP host) can never be escalated into a
 scary finding, and the *same* secret is rated `medium` at `600` perms in your
 home dir but `critical` once it lands in a git repo or a synced folder.
 
-## skopecreep vs mcp-scan
+## skopecreep vs server scanners
 
-They audit different sides of the same problem and are meant to be used
-together, not as alternatives:
+Server-side MCP scanners (e.g. [Snyk Agent Scan](https://github.com/invariantlabs-ai/mcp-scan),
+formerly Invariant Labs' mcp-scan) audit a different side of the same problem
+and compose with skopecreep rather than replacing it:
 
-| | [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) | skopecreep |
+| | Server scanners | skopecreep |
 | --- | --- | --- |
 | Audits | The MCP **servers** you connect to (tool poisoning, rug pulls, cross-server injection) | **Your machine's** granted scope across every coding agent (permissions, hooks, trust, secrets, context injection) |
 | Scope | MCP protocol specifically | Claude Code, Codex CLI, Cursor, Windsurf, Copilot, and generic `AGENTS.md`/`.mcp.json` — MCP is one part of it |
-| Question it answers | "Is this MCP server safe to connect to?" | "What have I actually granted my agents, and where does it stand out as risky?" |
-| Output | Server-side risk findings | Calibrated findings ranked by `risk = impact × (exposure + exploitability)`, with baselining and `--fail-on` for CI |
+| Question it answers | "Is this MCP server safe to connect to?" | "What have I actually granted my agents, and where does it stand out as risky — and what changed since last time?" |
+| Output | Server-side risk findings | Calibrated findings ranked by `risk = impact × (exposure + exploitability)`, with baselining, creep diffs, SARIF, and `--fail-on` for CI |
 
-If you connect to third-party MCP servers, run mcp-scan on those servers and
-skopecreep on your own machine's configuration — they don't overlap.
+If you connect to third-party MCP servers, run a server scanner on those
+servers and skopecreep on your own machine's configuration — they don't
+overlap. Unlike most scanners in this space, skopecreep needs no account or
+API token and never sends anything off your machine.
 
 ## Safety
 
