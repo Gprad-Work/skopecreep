@@ -29,7 +29,10 @@ describe("correlateChains", () => {
   });
 
   it("escalates one severity step above the worst link", () => {
-    const chains = correlateChains([f("weak-sandbox", { severity: "high" }), f("mcp-shell-server", { severity: "medium" })]);
+    const chains = correlateChains([
+      f("weak-sandbox", { severity: "high" }),
+      f("mcp-shell-server", { severity: "medium" }),
+    ]);
     expect(chains[0]?.severity).toBe("critical"); // high → critical
   });
 
@@ -69,8 +72,12 @@ describe("correlateChains", () => {
 
   it("unions member ATLAS techniques and produces a stable id", () => {
     const members = [
-      f("weak-sandbox", { atlas: [{ tacticId: "T", tacticName: "T", techniqueId: "AML.T0053", techniqueName: "x", url: "u" }] }),
-      f("mcp-shell-server", { atlas: [{ tacticId: "T2", tacticName: "T2", techniqueId: "AML.T0011.001", techniqueName: "y", url: "u2" }] }),
+      f("weak-sandbox", {
+        atlas: [{ tacticId: "T", tacticName: "T", techniqueId: "AML.T0053", techniqueName: "x", url: "u" }],
+      }),
+      f("mcp-shell-server", {
+        atlas: [{ tacticId: "T2", tacticName: "T2", techniqueId: "AML.T0011.001", techniqueName: "y", url: "u2" }],
+      }),
     ];
     const a = correlateChains(members);
     const b = correlateChains(members);
