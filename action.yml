@@ -10,7 +10,10 @@ branding:
 
 inputs:
   version:
-    description: skopecreep version to run (pinned — do not use "latest" in CI)
+    description: >-
+      skopecreep version to run (pinned — do not use "latest" in CI). The
+      special value "local" runs the action repo's own checkout (requires a
+      prior `npm ci && npm run build` — used to dogfood this repo's CI).
     default: "0.3.0"
   path:
     description: Project directory to scan for project-scoped agent config
@@ -60,7 +63,11 @@ runs:
         [ -n "$SK_BASELINE" ] && args+=(--baseline "$SK_BASELINE")
         [ -n "$SK_FAIL_ON" ] && args+=(--fail-on "$SK_FAIL_ON")
         status=0
-        npx --yes "skopecreep@$SK_VERSION" "${args[@]}" || status=$?
+        if [ "$SK_VERSION" = "local" ]; then
+          node "$GITHUB_ACTION_PATH/dist/cli.js" "${args[@]}" || status=$?
+        else
+          npx --yes "skopecreep@$SK_VERSION" "${args[@]}" || status=$?
+        fi
         echo "report-file=$SK_OUTPUT" >> "$GITHUB_OUTPUT"
         if [ "$SK_FORMAT" = "sarif" ] && [ -f "$SK_OUTPUT" ]; then
           count=$(node -p "JSON.parse(require('node:fs').readFileSync('$SK_OUTPUT','utf8')).runs[0].results.length")
