@@ -1,11 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runAudit } from "../dist/audit.js";
-import { renderJson } from "../dist/reporters/json.js";
-import { renderTerminal } from "../dist/reporters/terminal.js";
 import { renderHtml } from "../dist/reporters/html.js";
+import { renderJson } from "../dist/reporters/json.js";
+import { renderSarif } from "../dist/reporters/sarif.js";
+import { renderTerminal } from "../dist/reporters/terminal.js";
 import { scanTextForSecrets } from "../dist/secrets/patterns.js";
 import { assertNoSecretLeak } from "../dist/secrets/redact.js";
 
@@ -173,7 +174,12 @@ describe("remediation tiers", () => {
 describe("never leaks a secret", () => {
   it("no reporter (json/terminal/html) emits a raw secret value", () => {
     const args = { findings: report.findings, suppressedCount: 0, minSeverity: "info" as const };
-    const combined = [renderJson(report, args), renderTerminal(report, args), renderHtml(report, args)].join("\n");
+    const combined = [
+      renderJson(report, args),
+      renderTerminal(report, args),
+      renderHtml(report, args),
+      renderSarif(report, args),
+    ].join("\n");
     expect(() => assertNoSecretLeak(combined, [AWS, JWT])).not.toThrow();
     expect(scanTextForSecrets(combined).length).toBe(0);
   });

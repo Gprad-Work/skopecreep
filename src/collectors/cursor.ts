@@ -1,10 +1,10 @@
 /** Collector for Cursor (~/.cursor, project .cursor/, VSCode-style settings). */
 import * as path from "node:path";
 import type { Inventory, Tool } from "../model.js";
-import type { Collector } from "./types.js";
 import { fileExists, isDir, listDir, parseJsoncSafe, readTextSafe } from "../util.js";
 import { parseMcpMap } from "./mcpShared.js";
 import { makeContextSource } from "./shared.js";
+import type { Collector } from "./types.js";
 
 const TOOL = "cursor" as const;
 

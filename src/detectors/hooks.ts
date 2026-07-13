@@ -1,10 +1,10 @@
 /** Lifecycle hooks — auto-run commands on agent tool events. */
 import * as path from "node:path";
 import type { Finding } from "../model.js";
-import type { Detector } from "./types.js";
-import { computeSeverity } from "../severity.js";
-import { makeFindingId } from "./util.js";
 import { evidenceSnippet } from "../secrets/redact.js";
+import { computeSeverity } from "../severity.js";
+import type { Detector } from "./types.js";
+import { makeFindingId } from "./util.js";
 
 const NET_OR_OBFUSCATED =
   /curl|wget|\bnc\b|ncat|socat|ssh|scp|base64\s+(?:-d|--decode)|\beval\b|\|\s*(?:sh|bash|zsh)\b|https?:\/\//i;
@@ -29,9 +29,7 @@ function segmentBinary(segment: string): string {
 }
 
 function invokesAgent(command: string): boolean {
-  return command
-    .split(/\s*(?:&&|\|\||[|;])\s*/)
-    .some((seg) => AGENT_BINARIES.has(segmentBinary(seg)));
+  return command.split(/\s*(?:&&|\|\||[|;])\s*/).some((seg) => AGENT_BINARIES.has(segmentBinary(seg)));
 }
 
 export const detectHooks: Detector = (inv) => {

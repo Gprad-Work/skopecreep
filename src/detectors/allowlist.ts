@@ -1,19 +1,47 @@
 /** Broad shell-command allowlists (e.g. Codex prefix_rule allow entries). */
 import * as path from "node:path";
 import type { Finding } from "../model.js";
-import type { Detector } from "./types.js";
-import { computeSeverity, type Dim } from "../severity.js";
-import { makeFindingId } from "./util.js";
 import { evidenceSnippet } from "../secrets/redact.js";
+import { computeSeverity, type Dim } from "../severity.js";
+import type { Detector } from "./types.js";
+import { makeFindingId } from "./util.js";
 
 // Direct code-execution binaries.
 const HIGH = new Set([
-  "bash", "sh", "zsh", "fish", "eval", "python", "python3", "node", "ruby", "perl", "php", "xargs", "env",
+  "bash",
+  "sh",
+  "zsh",
+  "fish",
+  "eval",
+  "python",
+  "python3",
+  "node",
+  "ruby",
+  "perl",
+  "php",
+  "xargs",
+  "env",
 ]);
 // Network / cloud / packaging / encoding — powerful but not raw code-exec.
 const MED = new Set([
-  "curl", "wget", "ssh", "scp", "nc", "ncat", "socat", "az", "gcloud", "aws",
-  "kubectl", "docker", "npm", "npx", "pip", "pip3", "make", "base64",
+  "curl",
+  "wget",
+  "ssh",
+  "scp",
+  "nc",
+  "ncat",
+  "socat",
+  "az",
+  "gcloud",
+  "aws",
+  "kubectl",
+  "docker",
+  "npm",
+  "npx",
+  "pip",
+  "pip3",
+  "make",
+  "base64",
 ]);
 
 function tierImpact(binary: string): Dim {

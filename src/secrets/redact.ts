@@ -3,7 +3,7 @@
  * secret value. Fingerprints expose only type, length, entropy, and (when the
  * value is long enough to be non-identifying) the last four characters.
  */
-import { SIGNATURES, shannonEntropy, type SecretMatch } from "./patterns.js";
+import { type SecretMatch, SIGNATURES, shannonEntropy } from "./patterns.js";
 
 /** e.g. `jwt ****a1b2 (len 812, entropy 5.4)` */
 export function fingerprint(match: SecretMatch): string {
@@ -17,7 +17,7 @@ export function fingerprint(match: SecretMatch): string {
 export function redactionToken(match: SecretMatch): string {
   const v = match.matched;
   const last4 = v.length >= 12 ? v.slice(-4) : "";
-  return `‹redacted:${match.kind}${last4 ? " ****" + last4 : ""}›`;
+  return `‹redacted:${match.kind}${last4 ? ` ****${last4}` : ""}›`;
 }
 
 /**
@@ -30,7 +30,7 @@ export function redactSecretsInText(text: string): string {
     const re = new RegExp(sig.regex.source, "g");
     out = out.replace(re, (m) => {
       const last4 = m.length >= 12 ? m.slice(-4) : "";
-      return `‹redacted:${sig.kind}${last4 ? " ****" + last4 : ""}›`;
+      return `‹redacted:${sig.kind}${last4 ? ` ****${last4}` : ""}›`;
     });
   }
   return out;
@@ -42,7 +42,7 @@ export function redactSecretsInText(text: string): string {
  */
 export function evidenceSnippet(line: string, maxLen = 160): string {
   const redacted = redactSecretsInText(line.trim());
-  return redacted.length > maxLen ? redacted.slice(0, maxLen) + "…" : redacted;
+  return redacted.length > maxLen ? `${redacted.slice(0, maxLen)}…` : redacted;
 }
 
 /**

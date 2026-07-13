@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { detectFileHygiene } from "../../dist/detectors/fileHygiene.js";
-import { inv } from "./helpers.js";
 import type { Tool } from "../../dist/model.js";
+import { inv } from "./helpers.js";
 
 let dir: string;
 

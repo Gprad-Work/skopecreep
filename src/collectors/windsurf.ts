@@ -1,10 +1,10 @@
 /** Collector for Windsurf / Codeium (~/.codeium/windsurf). */
 import * as path from "node:path";
 import type { Tool } from "../model.js";
-import type { Collector } from "./types.js";
 import { fileExists, isDir, parseJsoncSafe, readTextSafe } from "../util.js";
 import { parseMcpMap } from "./mcpShared.js";
 import { makeContextSource } from "./shared.js";
+import type { Collector } from "./types.js";
 
 const TOOL = "windsurf" as const;
 

@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { detectMcpSupplyChain } from "../../dist/detectors/mcpSupplyChain.js";
-import { inv, src } from "./helpers.js";
 import type { MCPServer } from "../../dist/model.js";
+import { inv, src } from "./helpers.js";
 
 function stdioServer(overrides: Partial<MCPServer>): MCPServer {
   return {
@@ -23,7 +23,12 @@ describe("detectMcpSupplyChain", () => {
     const findings = detectMcpSupplyChain(
       inv({
         mcpServers: [
-          stdioServer({ command: "npx", args: ["-y", "snyk@latest", "mcp"], packageSpec: "snyk@latest", pinned: false }),
+          stdioServer({
+            command: "npx",
+            args: ["-y", "snyk@latest", "mcp"],
+            packageSpec: "snyk@latest",
+            pinned: false,
+          }),
         ],
       }),
     );
@@ -62,7 +67,12 @@ describe("detectMcpSupplyChain", () => {
     const findings = detectMcpSupplyChain(
       inv({
         mcpServers: [
-          stdioServer({ command: "sh", args: ["-c", "npx -y snyk@latest mcp"], packageSpec: "snyk@latest", pinned: false }),
+          stdioServer({
+            command: "sh",
+            args: ["-c", "npx -y snyk@latest mcp"],
+            packageSpec: "snyk@latest",
+            pinned: false,
+          }),
         ],
       }),
     );
@@ -80,7 +90,11 @@ describe("detectMcpSupplyChain", () => {
 
   it("flags a server installed from a git+https URL on a branch", () => {
     const findings = detectMcpSupplyChain(
-      inv({ mcpServers: [stdioServer({ command: "uvx", args: ["--from", "git+https://github.com/someuser/mcp.git@main", "mcp"] })] }),
+      inv({
+        mcpServers: [
+          stdioServer({ command: "uvx", args: ["--from", "git+https://github.com/someuser/mcp.git@main", "mcp"] }),
+        ],
+      }),
     );
     expect(findings.some((f) => f.ruleId === "mcp-remote-code-source")).toBe(true);
   });
@@ -89,7 +103,10 @@ describe("detectMcpSupplyChain", () => {
     const findings = detectMcpSupplyChain(
       inv({
         mcpServers: [
-          stdioServer({ command: "uvx", args: ["--from", "git+https://github.com/someuser/mcp.git@0f4c9a1b2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a", "mcp"] }),
+          stdioServer({
+            command: "uvx",
+            args: ["--from", "git+https://github.com/someuser/mcp.git@0f4c9a1b2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a", "mcp"],
+          }),
         ],
       }),
     );
@@ -162,7 +179,11 @@ describe("detectMcpSupplyChain", () => {
 
   it("does not flag a plain registry package as a remote code source", () => {
     const findings = detectMcpSupplyChain(
-      inv({ mcpServers: [stdioServer({ command: "npx", args: ["-y", "snyk@1.2.3", "mcp"], packageSpec: "snyk@1.2.3", pinned: true })] }),
+      inv({
+        mcpServers: [
+          stdioServer({ command: "npx", args: ["-y", "snyk@1.2.3", "mcp"], packageSpec: "snyk@1.2.3", pinned: true }),
+        ],
+      }),
     );
     expect(findings.some((f) => f.ruleId === "mcp-remote-code-source")).toBe(false);
   });

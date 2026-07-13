@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Lets release.yml reuse this entire workflow as its test gate.
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -15,11 +20,66 @@ jobs:
         node-version: [20, 22, 24]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run coverage
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  # Single required check for branch protection — passes only when every
+  # matrix cell and the quality job pass.
+  ci-ok:
+    runs-on: ubuntu-latest
+    needs: [test, quality]
+    if: always()
+    steps:
+      - name: Fail if any dependency failed
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "A required job failed."
+            exit 1
+          fi
+          echo "All required jobs passed."
+
+  # Dogfood: run the composite action against this repo on every PR and
+  # upload the SARIF — end-to-end proof the action and ingestion work.
+  dogfood:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run build
+      - id: scan
+        uses: ./
+        with:
+          version: local # dogfood the PR's own code, not a published tarball
+          fail-on: "" # report only; the SARIF upload is the point here
+      - uses: github/codeql-action/upload-sarif@641a925cfafe92d0fdf8b239ba4053e3f8d99d6d # v3
+        with:
+          sarif_file: ${{ steps.scan.outputs.report-file }}

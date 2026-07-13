@@ -1,9 +1,9 @@
 /** Secrets at rest: credential files, MCP env blocks, and secrets in context. */
 import type { Finding } from "../model.js";
-import type { Detector } from "./types.js";
-import { computeSeverity, exposureFromFile, type Dim } from "../severity.js";
 import { scanTextForSecrets } from "../secrets/patterns.js";
 import { fingerprint } from "../secrets/redact.js";
+import { computeSeverity, type Dim, exposureFromFile } from "../severity.js";
+import type { Detector } from "./types.js";
 import { exposureForPath, makeFindingId } from "./util.js";
 
 const HIGH_VALUE_KINDS = new Set([
@@ -71,7 +71,13 @@ export const detectSecrets: Detector = (inv) => {
         medium: `Replace the inline value with an environment-variable reference (e.g. \${${s.secretEnvKeys[0] ?? "VAR"}}) so the config file holds no secret.`,
         tight: `Move the secret to a secret manager, inject it into the server's environment at launch, and rotate the currently-inlined value.`,
       },
-      evidence: [{ path: s.source.path, locator: s.source.locator, redactedSnippet: `secret env keys: ${s.secretEnvKeys.join(", ")}` }],
+      evidence: [
+        {
+          path: s.source.path,
+          locator: s.source.locator,
+          redactedSnippet: `secret env keys: ${s.secretEnvKeys.join(", ")}`,
+        },
+      ],
     });
   }
 

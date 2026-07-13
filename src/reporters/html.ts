@@ -20,11 +20,7 @@ export interface HtmlOptions {
 }
 
 function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 const SEV_LABEL: Record<Severity, string> = {
@@ -294,7 +290,8 @@ export function renderHtmlContent(report: AuditReport, opts: HtmlOptions): strin
       ? `<span class="seg sev-${s}"><span class="dot"></span><b>${counts[s]}</b> ${esc(SEV_LABEL[s])}</span>`
       : "",
   ).join("");
-  const tallyBlock = total > 0 ? tally : `<span class="seg none">No findings at or above ${esc(opts.minSeverity)}</span>`;
+  const tallyBlock =
+    total > 0 ? tally : `<span class="seg none">No findings at or above ${esc(opts.minSeverity)}</span>`;
   const suppressed = opts.suppressedCount > 0 ? `<span class="seg none">${opts.suppressedCount} suppressed</span>` : "";
 
   const toolRows = report.inventory.tools

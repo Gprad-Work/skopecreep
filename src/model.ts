@@ -8,22 +8,9 @@
  */
 import type { AtlasRef } from "./atlas.js";
 
-export type ToolId =
-  | "claude-code"
-  | "codex"
-  | "cursor"
-  | "windsurf"
-  | "copilot"
-  | "generic";
+export type ToolId = "claude-code" | "codex" | "cursor" | "windsurf" | "copilot" | "generic";
 
-export const ALL_TOOL_IDS: ToolId[] = [
-  "claude-code",
-  "codex",
-  "cursor",
-  "windsurf",
-  "copilot",
-  "generic",
-];
+export const ALL_TOOL_IDS: ToolId[] = ["claude-code", "codex", "cursor", "windsurf", "copilot", "generic"];
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
 export type Confidence = "low" | "medium" | "high";
@@ -92,12 +79,7 @@ export interface Hook {
   source: SourceRef;
 }
 
-export type ContextRole =
-  | "instructions"
-  | "rule"
-  | "memory"
-  | "agent"
-  | "skill";
+export type ContextRole = "instructions" | "rule" | "memory" | "agent" | "skill";
 
 export interface ContextSource {
   tool: ToolId;

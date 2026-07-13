@@ -1,11 +1,11 @@
 /** Collector for OpenAI Codex CLI (~/.codex). */
 import * as path from "node:path";
 import { parse as parseToml } from "smol-toml";
-import type { Inventory, Tool } from "../model.js";
-import type { Collector } from "./types.js";
+import type { Tool } from "../model.js";
 import { fileExists, isDir, readTextSafe } from "../util.js";
 import { parseMcpMap } from "./mcpShared.js";
 import { collectCredentialFromFile, makeContextSource } from "./shared.js";
+import type { Collector } from "./types.js";
 
 const TOOL = "codex" as const;
 
@@ -79,17 +79,33 @@ export const collectCodex: Collector = (ctx, inv) => {
       }
 
       if (typeof cfg.approval_policy === "string") {
-        inv.grants.push({ tool: TOOL, kind: "auto-approve", value: cfg.approval_policy, source: { path: configPath, locator: "approval_policy" } });
+        inv.grants.push({
+          tool: TOOL,
+          kind: "auto-approve",
+          value: cfg.approval_policy,
+          source: { path: configPath, locator: "approval_policy" },
+        });
       }
       if (typeof cfg.sandbox_mode === "string") {
-        inv.grants.push({ tool: TOOL, kind: "sandbox", value: cfg.sandbox_mode, source: { path: configPath, locator: "sandbox_mode" } });
+        inv.grants.push({
+          tool: TOOL,
+          kind: "sandbox",
+          value: cfg.sandbox_mode,
+          source: { path: configPath, locator: "sandbox_mode" },
+        });
       }
 
       const plugins = cfg.plugins as Record<string, any> | undefined;
       if (plugins && typeof plugins === "object") {
         for (const [name, pconf] of Object.entries(plugins)) {
           if ((pconf as Record<string, unknown>)?.enabled === true) {
-            inv.capabilityDefs.push({ tool: TOOL, kind: "plugin", name, grantedTools: [], source: { path: configPath, locator: `plugins.${name}` } });
+            inv.capabilityDefs.push({
+              tool: TOOL,
+              kind: "plugin",
+              name,
+              grantedTools: [],
+              source: { path: configPath, locator: `plugins.${name}` },
+            });
           }
         }
       }

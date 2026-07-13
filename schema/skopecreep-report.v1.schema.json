@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Gprad-Work/skopecreep/blob/main/schema/skopecreep-report.v1.schema.json",
+  "title": "skopecreep JSON report (schemaVersion 1)",
+  "description": "Output of `skopecreep scan --format json`. Additive changes never bump schemaVersion; breaking shape changes do.",
+  "type": "object",
+  "required": ["schemaVersion", "tool", "generatedAt", "host", "summary", "findings", "inventory"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tool": { "const": "skopecreep" },
+    "generatedAt": { "type": "string" },
+    "host": {
+      "type": "object",
+      "required": ["platform"],
+      "properties": { "platform": { "type": "string" } }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "suppressed", "minSeverity", "bySeverity"],
+      "properties": {
+        "total": { "type": "integer" },
+        "suppressed": { "type": "integer" },
+        "minSeverity": { "$ref": "#/$defs/severity" },
+        "bySeverity": { "type": "object", "additionalProperties": { "type": "integer" } }
+      }
+    },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "inventory": {
+      "type": "object",
+      "required": ["tools", "mcpServers", "grants", "hooks", "credentials", "capabilityDefs", "contextSources", "errors"],
+      "properties": {
+        "tools": { "type": "array" },
+        "mcpServers": { "type": "array" },
+        "grants": { "type": "array" },
+        "hooks": { "type": "array" },
+        "credentials": { "type": "array" },
+        "capabilityDefs": { "type": "array" },
+        "contextSources": {
+          "type": "array",
+          "items": { "type": "object", "not": { "required": ["content"] } }
+        },
+        "errors": { "type": "array" }
+      }
+    }
+  },
+  "$defs": {
+    "severity": { "enum": ["info", "low", "medium", "high", "critical"] },
+    "finding": {
+      "type": "object",
+      "required": ["id", "ruleId", "tool", "severity", "confidence", "title", "rationale", "remediation", "evidence"],
+      "properties": {
+        "id": { "type": "string" },
+        "ruleId": { "type": "string" },
+        "tool": { "type": "string" },
+        "severity": { "$ref": "#/$defs/severity" },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "title": { "type": "string" },
+        "rationale": { "type": "string" },
+        "remediation": {
+          "type": "object",
+          "required": ["loose", "medium", "tight"],
+          "properties": {
+            "loose": { "type": "string" },
+            "medium": { "type": "string" },
+            "tight": { "type": "string" }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string" },
+              "locator": { "type": "string" },
+              "redactedSnippet": { "type": "string" }
+            }
+          }
+        },
+        "atlas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["tacticId", "tacticName", "techniqueId", "techniqueName", "url"]
+          }
+        }
+      }
+    }
+  }
+}

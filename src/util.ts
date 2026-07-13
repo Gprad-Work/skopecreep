@@ -1,9 +1,10 @@
 /** Filesystem / path helpers shared by collectors. All read-only. */
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { homedir } from "node:os";
+
 import { createHash } from "node:crypto";
-import { parse as parseJsonc, ParseError } from "jsonc-parser";
+import * as fs from "node:fs";
+import { homedir } from "node:os";
+import * as path from "node:path";
+import { type ParseError, parse as parseJsonc } from "jsonc-parser";
 
 export const HOME = homedir();
 export const IS_WINDOWS = process.platform === "win32";

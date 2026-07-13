@@ -1,17 +1,18 @@
 /** Detector registry — runs every rule, dedupes, and severity-sorts findings. */
+
+import { atlasForRule } from "../atlas.js";
 import type { Finding, Inventory } from "../model.js";
 import { severityRank } from "../severity.js";
-import { atlasForRule } from "../atlas.js";
-import type { Detector } from "./types.js";
-import { detectSecrets } from "./secrets.js";
-import { detectMcpSupplyChain } from "./mcpSupplyChain.js";
-import { detectMcpHostTrust } from "./mcpHostTrust.js";
-import { detectPermissions } from "./permissions.js";
-import { detectTrust } from "./trust.js";
 import { detectAllowlist } from "./allowlist.js";
-import { detectHooks } from "./hooks.js";
 import { detectContextInjection } from "./contextInjection.js";
 import { detectFileHygiene } from "./fileHygiene.js";
+import { detectHooks } from "./hooks.js";
+import { detectMcpHostTrust } from "./mcpHostTrust.js";
+import { detectMcpSupplyChain } from "./mcpSupplyChain.js";
+import { detectPermissions } from "./permissions.js";
+import { detectSecrets } from "./secrets.js";
+import { detectTrust } from "./trust.js";
+import type { Detector } from "./types.js";
 
 export const DETECTORS: Detector[] = [
   detectSecrets,

@@ -1,9 +1,9 @@
 /** Over-broad trusted directories and disabled sandboxing (Codex-style). */
 import * as path from "node:path";
 import type { Finding } from "../model.js";
-import type { Detector } from "./types.js";
 import { computeSeverity, type Dim } from "../severity.js";
-import { HOME, expandHome } from "../util.js";
+import { expandHome, HOME } from "../util.js";
+import type { Detector } from "./types.js";
 import { makeFindingId } from "./util.js";
 
 const HOME_SEGMENTS = HOME.split(path.sep).filter(Boolean).length;

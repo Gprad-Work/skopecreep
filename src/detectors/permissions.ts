@@ -1,7 +1,7 @@
 /** Over-broad permission grants, permission-bypass modes, and auto-approval. */
 import type { Finding } from "../model.js";
-import type { Detector } from "./types.js";
 import { computeSeverity, type Dim } from "../severity.js";
+import type { Detector } from "./types.js";
 import { makeFindingId } from "./util.js";
 
 /** How powerful is the tool a permission rule grants? */
@@ -24,8 +24,7 @@ function parseRule(value: string): ParsedRule | null {
   if (!m) return null;
   const tool = m[1]!;
   const arg = (m[2] ?? "").trim();
-  const broad =
-    arg === "" || arg === "*" || arg === ":*" || arg === "*:*" || /^\*[:*]?$/.test(arg);
+  const broad = arg === "" || arg === "*" || arg === ":*" || arg === "*:*" || /^\*[:*]?$/.test(arg);
   return { tool, broad };
 }
 
@@ -36,7 +35,7 @@ export const detectPermissions: Detector = (inv) => {
     if (g.kind === "permission-rule") {
       if (g.scope === "deny") continue; // deny rules are protective
       const parsed = parseRule(g.value);
-      if (!parsed || !parsed.broad) continue;
+      if (!parsed?.broad) continue;
       const impact = impactForTool(parsed.tool);
       if (impact === 0) continue;
       findings.push({

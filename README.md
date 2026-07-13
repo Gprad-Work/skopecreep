@@ -1,6 +1,9 @@
 # skopecreep
 
-
+[![CI](https://github.com/Gprad-Work/skopecreep/actions/workflows/ci.yml/badge.svg)](https://github.com/Gprad-Work/skopecreep/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/skopecreep)](https://www.npmjs.com/package/skopecreep)
+[![node](https://img.shields.io/node/v/skopecreep)](https://www.npmjs.com/package/skopecreep)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 A read-only CLI that audits the configuration and granted scope of your AI
 coding agents — Claude Code, Codex CLI, Cursor, Windsurf, Copilot, and generic
@@ -19,7 +22,7 @@ npx skopecreep
 - [Usage](#usage)
 - [What it checks](#what-it-checks)
 - [Why](#why)
-- [skopecreep vs mcp-scan](#skopecreep-vs-mcp-scan)
+- [skopecreep vs server scanners](#skopecreep-vs-server-scanners)
 - [Safety](#safety)
 - [Development](#development)
 - [Roadmap](#roadmap)
@@ -52,10 +55,13 @@ skopecreep                          # scan everything, human-readable report
 skopecreep scan --tool codex,cursor # limit to specific tools
 skopecreep scan --format json --out report.json
 skopecreep scan --format html --out report.html   # shareable dossier-style report
+skopecreep scan --format sarif --out skopecreep.sarif   # GitHub code scanning
 skopecreep scan --min-severity medium
 skopecreep scan --fail-on high      # non-zero exit for CI gating
 skopecreep scan --write-baseline .skopecreep-baseline.json   # accept current findings
 skopecreep scan --baseline .skopecreep-baseline.json         # …and stay quiet about them
+skopecreep scan --write-snapshot .skopecreep-snapshot.json   # record posture
+skopecreep scan --diff .skopecreep-snapshot.json --fail-on-new  # what crept in since?
 skopecreep scan --verbose           # also list the config files scanned per tool
 skopecreep list-mcp                 # quick MCP-server inventory across tools
 skopecreep redact-check             # self-test: assert no secret leaks into output
@@ -67,11 +73,14 @@ Options:
 | --- | --- |
 | `--tool <a,b>` | Limit to `claude`, `codex`, `cursor`, `windsurf`, `copilot`, `generic` |
 | `--path <dir>` | Project dir to scan for project-scoped config (default: cwd) |
-| `--format <fmt>` | `terminal` (default), `json`, or `html` (self-contained report) |
+| `--format <fmt>` | `terminal` (default), `json`, `html` (self-contained report), or `sarif` (code scanning) |
 | `--out <file>` | Write the report to a file instead of stdout |
 | `--min-severity <s>` | `info` \| `low` \| `medium` \| `high` \| `critical` (default `low`) |
 | `--baseline <file>` | Suppress findings whose id is listed in this JSON file |
 | `--write-baseline <file>` | Snapshot all current finding ids into a baseline file |
+| `--write-snapshot <file>` | Record current posture (findings + granted surface) for `--diff` |
+| `--diff <snapshot>` | Report creep: what's new since the snapshot |
+| `--fail-on-new` | With `--diff`: exit non-zero if anything new appeared |
 | `--fail-on <s>` | Exit non-zero if any kept finding is at/above this severity |
 | `--verbose` | Also list the config files each tool's collector read |
 
@@ -84,6 +93,70 @@ finding ids or `{ "ignore": ["<id>", …] }`. Finding ids are stable across
 runs, so a triaged finding stays suppressed until the underlying config
 changes. A baseline file that is missing or malformed is a hard error, not a
 silent no-op.
+
+### Creep detection
+
+The tool's namesake: record today's posture, then let any later scan tell you
+exactly what got granted since.
+
+```bash
+skopecreep scan --write-snapshot .skopecreep-snapshot.json   # record posture
+# …days later, or nightly in cron/CI:
+skopecreep scan --diff .skopecreep-snapshot.json --fail-on-new
+```
+
+The creep report lists findings and granted surface (permission rules, MCP
+servers, hooks, credentials) that are **new since the snapshot** — a broad
+rule added by a tool update, an MCP server a cloned repo slipped in, a hook
+you don't remember approving. `--fail-on-new` exits non-zero when anything
+appeared, so a scheduled job stays silent until the posture actually changes.
+
+### CI integration
+
+GitHub Actions — the bundled action scans the runner + checkout and feeds
+GitHub code scanning:
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+steps:
+  - uses: actions/checkout@v4
+  - id: scan
+    uses: Gprad-Work/skopecreep@v0.3.0
+    with:
+      fail-on: "" # upload first, gate later (or set: high)
+  - uses: github/codeql-action/upload-sarif@v3
+    with:
+      sarif_file: ${{ steps.scan.outputs.report-file }}
+```
+
+Findings then appear in the repo's **Security → Code scanning** tab, with
+severity, graded fixes, and ATLAS technique tags. To hard-gate instead, set
+`fail-on: high` (exit code 1 fails the job).
+
+Any other CI (GitLab example):
+
+```yaml
+agent-audit:
+  image: node:22
+  script:
+    - npx --yes skopecreep@0.3.0 scan --format json --out skopecreep.json --fail-on high
+  artifacts:
+    paths: [skopecreep.json]
+    when: always
+```
+
+### Output schema stability
+
+JSON output carries a top-level `schemaVersion` (currently `1`), with a
+machine contract in
+[`schema/skopecreep-report.v1.schema.json`](schema/skopecreep-report.v1.schema.json)
+that the test suite validates against. Policy: **additive** changes (new
+fields, new rules) never bump `schemaVersion`; **breaking** shape changes bump
+it and are called out in the CHANGELOG (the 0.2.0 change of
+`finding.remediation` from string to object is the precedent this policy
+exists to prevent repeating unannounced). SARIF output follows SARIF 2.1.0.
 
 ## What it checks
 
@@ -138,20 +211,23 @@ non-secret UUID, a first-party SaaS MCP host) can never be escalated into a
 scary finding, and the *same* secret is rated `medium` at `600` perms in your
 home dir but `critical` once it lands in a git repo or a synced folder.
 
-## skopecreep vs mcp-scan
+## skopecreep vs server scanners
 
-They audit different sides of the same problem and are meant to be used
-together, not as alternatives:
+Server-side MCP scanners (e.g. [Snyk Agent Scan](https://github.com/invariantlabs-ai/mcp-scan),
+formerly Invariant Labs' mcp-scan) audit a different side of the same problem
+and compose with skopecreep rather than replacing it:
 
-| | [mcp-scan](https://github.com/invariantlabs-ai/mcp-scan) | skopecreep |
+| | Server scanners | skopecreep |
 | --- | --- | --- |
 | Audits | The MCP **servers** you connect to (tool poisoning, rug pulls, cross-server injection) | **Your machine's** granted scope across every coding agent (permissions, hooks, trust, secrets, context injection) |
 | Scope | MCP protocol specifically | Claude Code, Codex CLI, Cursor, Windsurf, Copilot, and generic `AGENTS.md`/`.mcp.json` — MCP is one part of it |
-| Question it answers | "Is this MCP server safe to connect to?" | "What have I actually granted my agents, and where does it stand out as risky?" |
-| Output | Server-side risk findings | Calibrated findings ranked by `risk = impact × (exposure + exploitability)`, with baselining and `--fail-on` for CI |
+| Question it answers | "Is this MCP server safe to connect to?" | "What have I actually granted my agents, and where does it stand out as risky — and what changed since last time?" |
+| Output | Server-side risk findings | Calibrated findings ranked by `risk = impact × (exposure + exploitability)`, with baselining, creep diffs, SARIF, and `--fail-on` for CI |
 
-If you connect to third-party MCP servers, run mcp-scan on those servers and
-skopecreep on your own machine's configuration — they don't overlap.
+If you connect to third-party MCP servers, run a server scanner on those
+servers and skopecreep on your own machine's configuration — they don't
+overlap. Unlike most scanners in this space, skopecreep needs no account or
+API token and never sends anything off your machine.
 
 ## Safety
 
@@ -163,6 +239,21 @@ skopecreep on your own machine's configuration — they don't overlap.
 - **Privacy.** v1 audits configuration only — it does not read conversation
   transcripts. Context/instruction files are read into memory for scanning and
   their bodies are never written to any report.
+
+### Don't take our word for it
+
+Every safety claim above is enforced as a build-failing test, not a promise:
+
+- **No network, provably.** [`test/no-network.test.ts`](test/no-network.test.ts)
+  fails the build if any shipped file imports a network-capable module
+  (`http`, `https`, `net`, `tls`, `dns`, …) or calls `fetch`/`WebSocket`. No
+  account, no token, no telemetry — there is no code that could send anything.
+- **No secret leaks, provably.** The integration suite renders a report from a
+  fixture full of planted secrets through *every* output format and asserts no
+  secret-shaped value survives; `skopecreep redact-check` runs the same check
+  against your real machine, locally.
+- **Four runtime dependencies**, each a parser or terminal-color helper —
+  pinned by the same test. Small enough to read in an afternoon.
 
 Found a security issue? See [docs/SECURITY.md](docs/SECURITY.md) —
 please don't file it as a public issue.
@@ -181,15 +272,19 @@ Architecture: `collectors → normalized model → detectors → severity → ba
 is one collector and adding a check is one detector. See `src/model.ts`.
 
 Want to contribute a collector or a detector? See
-[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
+[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). This project follows the
+[Contributor Covenant](docs/CODE_OF_CONDUCT.md).
 
 ## Roadmap
 
+- ~~SARIF output + a GitHub Action~~ — shipped (see [CI integration](#ci-integration)).
+- **Creep detection** — diff the current posture against a previous snapshot
+  and flag *new* grants/servers/hooks since the last audit.
 - Call-history analysis (Codex SQLite logs, Claude transcripts) — report which
   tools/MCP calls were actually made, not just what's configured.
-- SARIF output + a GitHub Action.
 - Live MCP OAuth **scope** introspection.
 - More tools (aider, continue, gemini, zed).
+- OWASP Agentic AI / MCP Top 10 mappings alongside ATLAS.
 - Single static binary distribution (Go) for a runtime-free install.
 
 ## License

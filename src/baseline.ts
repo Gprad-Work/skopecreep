@@ -32,13 +32,10 @@ export function loadBaseline(path: string | undefined): Baseline {
  */
 export function renderBaseline(findings: Finding[]): string {
   const ids = [...new Set(findings.map((f) => f.id))].sort();
-  return JSON.stringify({ ignore: ids }, null, 2) + "\n";
+  return `${JSON.stringify({ ignore: ids }, null, 2)}\n`;
 }
 
-export function applyBaseline(
-  findings: Finding[],
-  baseline: Baseline,
-): { kept: Finding[]; suppressed: Finding[] } {
+export function applyBaseline(findings: Finding[], baseline: Baseline): { kept: Finding[]; suppressed: Finding[] } {
   const kept: Finding[] = [];
   const suppressed: Finding[] = [];
   for (const f of findings) {

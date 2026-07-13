@@ -1,10 +1,10 @@
 /** Cross-tool catch-all: AGENTS.md and .mcp.json anywhere in the project tree. */
 import * as path from "node:path";
 import type { Tool } from "../model.js";
-import type { Collector } from "./types.js";
 import { fileExists, parseJsoncSafe, readTextSafe, walk } from "../util.js";
 import { parseMcpMap } from "./mcpShared.js";
 import { makeContextSource } from "./shared.js";
+import type { Collector } from "./types.js";
 
 const TOOL = "generic" as const;
 

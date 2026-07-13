@@ -1,0 +1,80 @@
+name: skopecreep
+description: >-
+  Audit the configuration and granted scope of AI coding agents (Claude Code,
+  Codex, Cursor, Windsurf, Copilot) on the runner / in the repo. Local-only,
+  no account, no telemetry. Emits SARIF for GitHub code scanning.
+author: Geet Pradhan
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  version:
+    description: >-
+      skopecreep version to run (pinned — do not use "latest" in CI). The
+      special value "local" runs the action repo's own checkout (requires a
+      prior `npm ci && npm run build` — used to dogfood this repo's CI).
+    default: "0.3.0"
+  path:
+    description: Project directory to scan for project-scoped agent config
+    default: "."
+  format:
+    description: Output format (sarif | json | terminal | html)
+    default: sarif
+  output:
+    description: File to write the report to
+    default: skopecreep.sarif
+  min-severity:
+    description: Minimum severity to report (info | low | medium | high | critical)
+    default: low
+  fail-on:
+    description: >-
+      Fail the step if any finding is at/above this severity. Leave empty to
+      never fail (e.g. when you want to upload SARIF first and gate later).
+    default: ""
+  baseline:
+    description: Baseline file of accepted finding ids (see --write-baseline)
+    default: ""
+
+outputs:
+  report-file:
+    description: Path of the written report (feed to codeql-action/upload-sarif when format=sarif)
+    value: ${{ steps.scan.outputs.report-file }}
+  findings-count:
+    description: Number of findings at/above min-severity (after baseline)
+    value: ${{ steps.scan.outputs.findings-count }}
+
+runs:
+  using: composite
+  steps:
+    - id: scan
+      shell: bash
+      env:
+        SK_VERSION: ${{ inputs.version }}
+        SK_PATH: ${{ inputs.path }}
+        SK_FORMAT: ${{ inputs.format }}
+        SK_OUTPUT: ${{ inputs.output }}
+        SK_MIN_SEVERITY: ${{ inputs.min-severity }}
+        SK_FAIL_ON: ${{ inputs.fail-on }}
+        SK_BASELINE: ${{ inputs.baseline }}
+      run: |
+        set -euo pipefail
+        args=(scan --path "$SK_PATH" --format "$SK_FORMAT" --out "$SK_OUTPUT" --min-severity "$SK_MIN_SEVERITY")
+        [ -n "$SK_BASELINE" ] && args+=(--baseline "$SK_BASELINE")
+        [ -n "$SK_FAIL_ON" ] && args+=(--fail-on "$SK_FAIL_ON")
+        status=0
+        if [ "$SK_VERSION" = "local" ]; then
+          node "$GITHUB_ACTION_PATH/dist/cli.js" "${args[@]}" || status=$?
+        else
+          npx --yes "skopecreep@$SK_VERSION" "${args[@]}" || status=$?
+        fi
+        echo "report-file=$SK_OUTPUT" >> "$GITHUB_OUTPUT"
+        if [ "$SK_FORMAT" = "sarif" ] && [ -f "$SK_OUTPUT" ]; then
+          count=$(node -p "JSON.parse(require('node:fs').readFileSync('$SK_OUTPUT','utf8')).runs[0].results.length")
+        elif [ "$SK_FORMAT" = "json" ] && [ -f "$SK_OUTPUT" ]; then
+          count=$(node -p "JSON.parse(require('node:fs').readFileSync('$SK_OUTPUT','utf8')).summary.total")
+        else
+          count=""
+        fi
+        echo "findings-count=$count" >> "$GITHUB_OUTPUT"
+        exit $status

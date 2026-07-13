@@ -7,7 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-13
+
 ### Added
+- **Creep detection** — `--write-snapshot <file>` records the machine's
+  posture (finding ids + every granted capability: permission rules, MCP
+  servers, hooks, credentials); `--diff <snapshot>` reports exactly what's
+  new since, and `--fail-on-new` turns a cron/CI run into a tripwire that
+  stays silent until the posture actually changes
+- **SARIF 2.1.0 output** (`--format sarif`) for GitHub code scanning: severity
+  mapped to level + `security-severity`, graded fixes in rule help, ATLAS
+  technique tags, stable finding ids as `partialFingerprints`, project-scoped
+  evidence relativized so alerts annotate files
+- **Composite GitHub Action** (`Gprad-Work/skopecreep@<tag>`) wrapping a
+  pinned `npx skopecreep` run with `report-file`/`findings-count` outputs;
+  dogfooded in this repo's own CI with SARIF upload
+- **`schemaVersion: 1`** in JSON output plus a published JSON Schema
+  (`schema/skopecreep-report.v1.schema.json`) and a documented stability
+  policy (additive never bumps; breaking bumps + CHANGELOG callout)
+- **"Don't take our word for it" guarantees enforced in CI**: a build-failing
+  test asserts no shipped file imports a network-capable module or calls
+  `fetch`/`WebSocket`, and pins the runtime-dependency list — the no-network /
+  no-telemetry claims are now invariants, not promises
 - `--write-baseline <file>` — snapshot all current finding ids into a baseline
   file, so accepting today's findings no longer requires hand-extracting ids
   from the JSON report
@@ -25,6 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   they point at `--help` instead
 - Pluralization fixes ("1 findings scanned"), and the zero-findings terminal
   output now hints at `--min-severity info`
+
+### Internal
+- Biome lint + format (CI-gated `quality` job), vitest coverage thresholds,
+  `.editorconfig`/`.nvmrc`, Contributor Covenant 2.1 code of conduct,
+  CODEOWNERS, README badges, CI actions pinned to commit SHAs, single `ci-ok`
+  join check for branch protection
 
 ## [0.2.0] - 2026-07-11
 

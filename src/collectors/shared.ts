@@ -1,17 +1,13 @@
 /** Helpers for building ContextSource and CredentialAtRest entries. */
 import type { ContextRole, ContextSource, CredentialAtRest, ToolId } from "../model.js";
-import { readTextSafe, sha256, statInfo, isInVcsOrSyncedDir } from "../util.js";
-import { scanTextForSecrets, looksLikeSecret, type SecretMatch } from "../secrets/patterns.js";
+import { looksLikeSecret, type SecretMatch, scanTextForSecrets } from "../secrets/patterns.js";
 import { fingerprint } from "../secrets/redact.js";
+import { isInVcsOrSyncedDir, readTextSafe, sha256, statInfo } from "../util.js";
 
 const MAX_CONTENT_BYTES = 256 * 1024;
 
 /** Read a text/instruction/memory file into a ContextSource (content kept in memory only). */
-export function makeContextSource(
-  tool: ToolId,
-  role: ContextRole,
-  filePath: string,
-): ContextSource | null {
+export function makeContextSource(tool: ToolId, role: ContextRole, filePath: string): ContextSource | null {
   const st = statInfo(filePath);
   const text = readTextSafe(filePath);
   if (text === null) return null;
@@ -42,10 +38,7 @@ function walkJsonForSecrets(value: unknown, acc: SecretMatch[]): void {
  * Scan a file that may hold credentials (e.g. `~/.codex/auth.json`). Returns a
  * CredentialAtRest if any secret-shaped value is present. Never stores values.
  */
-export function collectCredentialFromFile(
-  tool: ToolId,
-  filePath: string,
-): CredentialAtRest | null {
+export function collectCredentialFromFile(tool: ToolId, filePath: string): CredentialAtRest | null {
   const text = readTextSafe(filePath);
   if (text === null) return null;
 

@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { detectMcpHostTrust } from "../../dist/detectors/mcpHostTrust.js";
-import { inv, src } from "./helpers.js";
 import type { MCPServer } from "../../dist/model.js";
+import { inv, src } from "./helpers.js";
 
 function remoteServer(overrides: Partial<MCPServer>): MCPServer {
   return {
@@ -48,7 +48,9 @@ describe("detectMcpHostTrust", () => {
 
   it("flags plain http:// to a non-loopback host as insecure transport", () => {
     const findings = detectMcpHostTrust(
-      inv({ mcpServers: [remoteServer({ host: "internal.corp.example.com", url: "http://internal.corp.example.com/mcp" })] }),
+      inv({
+        mcpServers: [remoteServer({ host: "internal.corp.example.com", url: "http://internal.corp.example.com/mcp" })],
+      }),
     );
     expect(findings.some((f) => f.ruleId === "mcp-insecure-transport")).toBe(true);
   });
@@ -80,7 +82,10 @@ describe("detectMcpHostTrust", () => {
       const findings = detectMcpHostTrust(
         inv({ mcpServers: [remoteServer({ host, url: `http://${host}:8080/mcp` })] }),
       );
-      expect(findings.some((f) => f.ruleId === "mcp-insecure-transport"), `flagged loopback ${host}`).toBe(false);
+      expect(
+        findings.some((f) => f.ruleId === "mcp-insecure-transport"),
+        `flagged loopback ${host}`,
+      ).toBe(false);
     }
   });
 

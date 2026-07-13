@@ -1,10 +1,11 @@
 /** MCP supply-chain: unpinned package runners, remote code sources, and shell-as-server. */
-import type { Finding } from "../model.js";
-import type { Detector } from "./types.js";
-import { computeSeverity } from "../severity.js";
+
 import * as path from "node:path";
-import { makeFindingId } from "./util.js";
+import type { Finding } from "../model.js";
 import { evidenceSnippet } from "../secrets/redact.js";
+import { computeSeverity } from "../severity.js";
+import type { Detector } from "./types.js";
+import { makeFindingId } from "./util.js";
 
 const SHELLS = new Set(["bash", "sh", "zsh", "fish"]);
 
@@ -13,7 +14,8 @@ const SHELLS = new Set(["bash", "sh", "zsh", "fish"]);
 // #<sha>) makes the ref immutable, so those are not flagged. The pin is
 // checked on the source token itself, not the whole command line — an
 // incidental hex token elsewhere must not vouch for the ref.
-const REMOTE_CODE_SOURCE = /(?:git\+https?:\/\/|\bgithub:|https?:\/\/[^\s"']+\.(?:sh|bash|py|js|mjs|ts|tar\.gz|tgz|zip|whl))/i;
+const REMOTE_CODE_SOURCE =
+  /(?:git\+https?:\/\/|\bgithub:|https?:\/\/[^\s"']+\.(?:sh|bash|py|js|mjs|ts|tar\.gz|tgz|zip|whl))/i;
 const COMMIT_PIN = /[@#][0-9a-f]{7,40}(?:$|["'])/i;
 
 /** "@scope/name@1.2.3" | "name@latest" → "@scope/name" | "name" */
