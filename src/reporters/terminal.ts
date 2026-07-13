@@ -82,8 +82,10 @@ export function renderTerminal(report: AuditReport, opts: TerminalOptions): stri
     }
   } else {
     for (const f of opts.findings) {
-      L.push(`${badge(f.severity)} ${pc.bold(f.title)}`);
-      L.push(`  ${pc.dim(`${f.tool} · ${f.ruleId} · confidence ${f.confidence}`)}`);
+      const chainTag = f.related ? `${pc.magenta("⛓ CHAIN")} ` : "";
+      L.push(`${badge(f.severity)} ${chainTag}${pc.bold(f.title)}`);
+      const relNote = f.related ? pc.dim(` · ${f.related.length} links · fix any one to break it`) : "";
+      L.push(`  ${pc.dim(`${f.tool} · ${f.ruleId} · confidence ${f.confidence}`)}${relNote}`);
       if (f.atlas && f.atlas.length > 0) {
         const tags = f.atlas.map((a) => `${a.techniqueId} ${a.techniqueName} (${a.tacticName})`).join(pc.dim(", "));
         L.push(`  ${pc.dim("ATLAS:")} ${pc.magenta(tags)}`);
