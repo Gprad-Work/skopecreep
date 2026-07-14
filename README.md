@@ -196,6 +196,20 @@ fix (lowest friction — keeps your workflow, trims the risk), a **medium** fix
 (the balanced default most users should apply), and a **tight** fix (maximum
 lockdown). Pick your own point on the security/friction curve.
 
+### Attack chains
+
+Some risk is compositional: an agent that runs actions without a confirmation
+gate is a `medium`; an MCP server that pulls unpinned code is a `medium`; a
+plaintext token is a `medium` — but together they're an unattended
+read-a-secret-and-run-anything path that no single-finding severity captures.
+skopecreep correlates findings that compose this way and emits a `chain-*`
+finding, escalated one level above its worst link, that names every link and
+its ATLAS techniques. Because the links are interdependent, the remediation is
+"**fix any one to break the chain**" — so a critical chain often has a
+one-line loose fix. Chains are conservative (scoped to a single agent, only
+when every ingredient is present) and behave like any other finding for
+`--fail-on`, baselines, SARIF, and creep diffs.
+
 ## Why
 
 Every AI coding tool accumulates an invisible attack surface: an MCP server that

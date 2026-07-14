@@ -57,6 +57,13 @@ export function maxSeverity(a: Severity, b: Severity): Severity {
   return RANK[a] >= RANK[b] ? a : b;
 }
 
+const BY_RANK: Severity[] = ["info", "low", "medium", "high", "critical"];
+
+/** One severity step higher, capped at critical — used to escalate attack chains. */
+export function nextSeverityUp(s: Severity): Severity {
+  return BY_RANK[Math.min(RANK[s] + 1, RANK.critical)]!;
+}
+
 export const SEVERITY_ORDER: Severity[] = ["critical", "high", "medium", "low", "info"];
 
 /**

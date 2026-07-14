@@ -83,6 +83,11 @@
             "type": "object",
             "required": ["tacticId", "tacticName", "techniqueId", "techniqueName", "url"]
           }
+        },
+        "related": {
+          "description": "Present only on attack-chain findings (ruleId chain-*): ids of the member findings composing the chain.",
+          "type": "array",
+          "items": { "type": "string" }
         }
       }
     }

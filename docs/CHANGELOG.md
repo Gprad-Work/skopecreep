@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Attack-chain correlation** — a pass after the detectors correlates
+  independent findings that compose into a worse scenario and emits a
+  synthesized `chain-*` finding, escalated one severity step above its worst
+  link (so three mediums that form an unattended-RCE path surface as a
+  critical). Chains are tool-scoped and conservative; each names its links,
+  carries their union of ATLAS techniques, and says "fix any one to break
+  it." Ships three chains: unattended code execution (no confirmation gate +
+  an untrusted code path), injection-to-exfiltration (injectable context + a
+  secret + an auto-approved egress), and tamperable agent config
+  (world-writable config feeding an auto-run path). Chain findings flow
+  through every reporter, `--fail-on`, baselines, and creep diffs like any
+  other finding; JSON/SARIF carry the member ids (`related` / `chainMembers`).
+
 ## [0.3.0] - 2026-07-13
 
 ### Added

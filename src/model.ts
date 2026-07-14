@@ -157,6 +157,12 @@ export interface Finding {
    * to every finding, so it's always populated by the time a report sees it.
    */
   atlas?: AtlasRef[];
+  /**
+   * Set only on synthesized attack-chain findings (ruleId `chain-*`): the ids
+   * of the member findings that compose the chain. Fixing any one member
+   * breaks the chain. Absent on ordinary findings.
+   */
+  related?: string[];
 }
 
 /** Reserved for the call-history fast-follow (v0.2). */

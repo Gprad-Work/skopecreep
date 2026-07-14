@@ -101,6 +101,7 @@ export function renderSarif(report: AuditReport, opts: SarifOptions): string {
         tool: f.tool,
         atlas: f.atlas ?? [],
         redactedSnippets: f.evidence.map((e) => e.redactedSnippet).filter(Boolean),
+        ...(f.related ? { chainMembers: f.related } : {}),
       },
     };
   });

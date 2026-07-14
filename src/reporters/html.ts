@@ -84,6 +84,8 @@ a{color:var(--low)}
 .f-head{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
 .chip{font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   color:#fff;background:var(--c,#888);padding:3px 8px;border-radius:2px}
+.chip.chain{background:var(--ink);color:var(--paper)}
+.finding.is-chain{border-left-style:double;border-left-width:6px}
 .f-title{font-weight:600;font-size:1.04rem;margin:0}
 .f-meta{font-family:var(--mono);font-size:.71rem;color:var(--ink-2);margin:9px 0 0;letter-spacing:.02em}
 .f-rationale{font-size:.93rem;margin:11px 0 0;color:#26221b}
@@ -215,13 +217,16 @@ function renderAtlasTags(f: Finding): string {
 }
 
 function renderFinding(f: Finding): string {
+  const chainChip = f.related ? '<span class="chip chain">⛓ Chain</span>' : "";
+  const chainMeta = f.related ? ` · ${f.related.length} links · fix any one to break it` : "";
   return `
-  <article class="finding sev-${f.severity}">
+  <article class="finding sev-${f.severity}${f.related ? " is-chain" : ""}">
     <div class="f-head">
       <span class="chip">${esc(SEV_LABEL[f.severity])}</span>
+      ${chainChip}
       <h3 class="f-title">${esc(f.title)}</h3>
     </div>
-    <p class="f-meta">${esc(f.tool)} · ${esc(f.ruleId)} · confidence ${esc(f.confidence)}</p>
+    <p class="f-meta">${esc(f.tool)} · ${esc(f.ruleId)} · confidence ${esc(f.confidence)}${chainMeta}</p>
     <p class="f-rationale">${esc(f.rationale)}</p>
     ${renderEvidence(f)}
     ${renderAtlasTags(f)}

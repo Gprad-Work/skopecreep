@@ -42,10 +42,14 @@ export function runDetectors(inv: Inventory): Finding[] {
       all.push({ ...f, atlas: atlasForRule(f.ruleId) });
     }
   }
-  all.sort((a, b) => {
+  return sortFindings(all);
+}
+
+/** Severity-desc, then tool, then ruleId — the canonical report order. */
+export function sortFindings(findings: Finding[]): Finding[] {
+  return findings.sort((a, b) => {
     const d = severityRank(b.severity) - severityRank(a.severity);
     if (d !== 0) return d;
     return a.tool.localeCompare(b.tool) || a.ruleId.localeCompare(b.ruleId);
   });
-  return all;
 }
