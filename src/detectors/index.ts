@@ -3,6 +3,7 @@
 import { atlasForRule } from "../atlas.js";
 import type { Finding, Inventory } from "../model.js";
 import { severityRank } from "../severity.js";
+import { detectAiRuntimes } from "./aiRuntimes.js";
 import { detectAllowlist } from "./allowlist.js";
 import { detectContextInjection } from "./contextInjection.js";
 import { detectFileHygiene } from "./fileHygiene.js";
@@ -24,6 +25,7 @@ export const DETECTORS: Detector[] = [
   detectHooks,
   detectContextInjection,
   detectFileHygiene,
+  detectAiRuntimes,
 ];
 
 export function runDetectors(inv: Inventory): Finding[] {

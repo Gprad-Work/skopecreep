@@ -35,6 +35,7 @@ export function renderJson(report: AuditReport, opts: JsonOptions): string {
       hooks: inv.hooks,
       credentials: inv.credentials,
       capabilityDefs: inv.capabilityDefs,
+      aiRuntimes: inv.aiRuntimes,
       contextSources,
       errors: inv.errors,
     },

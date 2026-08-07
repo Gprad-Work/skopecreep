@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **AI-system recognition** — beyond coding agents, skopecreep now inventories
+  the other AI systems on the machine (read-only, no execution): local model
+  runtimes (Ollama, LM Studio, llama.cpp, GPT4All, vLLM, Text Generation
+  WebUI), model hubs (Hugging Face), and API clients (DeepSeek, OpenAI,
+  Anthropic, Together, Groq, Mistral). Presence is inventory; two new
+  deterministic rules turn genuine risk into findings — `ai-runtime-token-at-rest`
+  (a plaintext token file on disk) and `ai-runtime-exposed` (a local runtime
+  bound to a non-loopback address, exposing an unauthenticated inference API).
+  Env-var API keys stay inventory-only (env is the recommended place). Shown in
+  the terminal (`AI systems detected`), JSON (`inventory.aiRuntimes`), SARIF,
+  and the HTML Inventory tab; mapped to ATLAS AML.T0055 / AML.T0040.
 - **Attack-chain correlation** — a pass after the detectors correlates
   independent findings that compose into a worse scenario and emits a
   synthesized `chain-*` finding, escalated one severity step above its worst

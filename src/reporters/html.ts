@@ -270,6 +270,25 @@ function renderMcpBlock(report: AuditReport): string {
   return `<h2 class="eyebrow">MCP servers</h2><div class="mcp-list">${rows}</div>`;
 }
 
+/** Non-agent AI systems (runtimes / hubs / API clients) recognized on the machine. */
+function renderAiRuntimeBlock(report: AuditReport): string {
+  const rts = report.inventory.aiRuntimes;
+  if (rts.length === 0) return "";
+  const rows = [...rts]
+    .sort((a, b) => a.kind.localeCompare(b.kind) || a.displayName.localeCompare(b.displayName))
+    .map((r) => {
+      const flags = [
+        r.tokenFiles?.length ? '<span class="mcp-flag danger">token on disk</span>' : "",
+        r.exposedHost ? `<span class="mcp-flag danger">exposed: ${esc(r.exposedHost)}</span>` : "",
+      ]
+        .filter(Boolean)
+        .join("");
+      return `<div class="mcp-row"><span class="name">${esc(r.displayName)}</span><span class="transport">${esc(r.kind)}</span><span class="target">${esc(r.evidence[0] ?? "")}</span>${flags}</div>`;
+    })
+    .join("");
+  return `<h2 class="eyebrow">AI systems detected</h2><div class="mcp-list">${rows}</div>`;
+}
+
 /** Findings arrive severity-sorted, but group explicitly rather than assume it —
  * a triage-first read (worst first, banded) is the point of a security report. */
 function renderFindingsGrouped(findings: Finding[], counts: Record<Severity, number>): string {
@@ -322,6 +341,7 @@ export function renderHtmlContent(report: AuditReport, opts: HtmlOptions): strin
     .join("");
 
   const mcpBlock = renderMcpBlock(report);
+  const aiRuntimeBlock = renderAiRuntimeBlock(report);
 
   return `<style>${HTML_CSS}</style>
 <div class="masthead"><div class="mast-inner">
@@ -343,6 +363,7 @@ export function renderHtmlContent(report: AuditReport, opts: HtmlOptions): strin
   </div>
   <div id="panel-inventory" role="tabpanel" aria-labelledby="tab-inventory" hidden>
     <h2 class="eyebrow">Tools detected</h2>
+    ${aiRuntimeBlock}
     <div class="tools">${toolRows}</div>
     ${mcpBlock}
   </div>

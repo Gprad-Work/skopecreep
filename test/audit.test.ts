@@ -15,6 +15,7 @@ const AWS = "AKIAIOSFODNN7EXAMPLE";
 const JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0LXVzZXIifQ.s5H0aBcDeFgHiJkLmNoPqRsTuVwXyZ012345";
 const ZW = String.fromCharCode(0x200b).repeat(6); // 6 zero-width spaces
 const CLOUD_ID = "995e7fd9-a697-472f-b956-73d89c5acf58";
+const HF_TOKEN = "hf_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ab";
 
 let home: string;
 let project: string;
@@ -66,6 +67,9 @@ beforeAll(() => {
   // Plaintext OAuth token file (Linux/headless machines without a keychain).
   write(".claude/.credentials.json", JSON.stringify({ claudeAiOauth: { accessToken: JWT } }), 0o600);
 
+  // --- Hugging Face: a recognized AI runtime with a plaintext token at rest ---
+  write(".huggingface/token", `${HF_TOKEN}\n`, 0o644);
+
   // --- Cursor: unknown remote host + a secret in MCP env ---
   write(
     ".cursor/mcp.json",
@@ -88,6 +92,14 @@ function ruleIds(): Set<string> {
   return new Set(report.findings.map((f) => f.ruleId));
 }
 
+describe("AI-runtime recognition", () => {
+  it("recognizes Hugging Face from its home dir and flags the token file", () => {
+    const hf = report.inventory.aiRuntimes.find((r) => r.id === "huggingface");
+    expect(hf, "Hugging Face not recognized").toBeDefined();
+    expect(hf?.tokenFiles?.some((p) => p.endsWith("token"))).toBe(true);
+  });
+});
+
 describe("detection coverage", () => {
   it("flags the expected rules", () => {
     const ids = ruleIds();
@@ -103,6 +115,7 @@ describe("detection coverage", () => {
       "secret-in-context",
       "mcp-unknown-remote-host",
       "secret-in-mcp-env",
+      "ai-runtime-token-at-rest",
     ]) {
       expect(ids.has(expected), `missing rule ${expected}`).toBe(true);
     }
@@ -180,7 +193,7 @@ describe("never leaks a secret", () => {
       renderHtml(report, args),
       renderSarif(report, args),
     ].join("\n");
-    expect(() => assertNoSecretLeak(combined, [AWS, JWT])).not.toThrow();
+    expect(() => assertNoSecretLeak(combined, [AWS, JWT, HF_TOKEN])).not.toThrow();
     expect(scanTextForSecrets(combined).length).toBe(0);
   });
 });

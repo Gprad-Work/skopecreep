@@ -180,6 +180,28 @@ export interface CollectorError {
   message: string;
 }
 
+/**
+ * A non-agent AI system detected on the machine — a local model runtime
+ * (Ollama, LM Studio, llama.cpp…), a model hub (Hugging Face), or an API
+ * client (DeepSeek, OpenAI…). Recognized read-only, never executed. Presence
+ * is inventory; the risk signals below are what detectors turn into findings.
+ */
+export type AIRuntimeKind = "local-runtime" | "model-hub" | "api-client";
+
+export interface AIRuntime {
+  id: string;
+  displayName: string;
+  kind: AIRuntimeKind;
+  installed: boolean;
+  /** paths / env-var names that evidenced its presence — never a secret value */
+  evidence: string[];
+  notes?: string[];
+  /** files that appear to hold a plaintext API/hub token (→ token-at-rest finding) */
+  tokenFiles?: string[];
+  /** a non-loopback address this local runtime is configured to listen on (→ exposed finding) */
+  exposedHost?: string;
+}
+
 export interface Inventory {
   tools: Tool[];
   mcpServers: MCPServer[];
@@ -188,6 +210,7 @@ export interface Inventory {
   contextSources: ContextSource[];
   credentials: CredentialAtRest[];
   capabilityDefs: CapabilityDef[];
+  aiRuntimes: AIRuntime[];
   callRecords: CallRecord[];
   errors: CollectorError[];
 }
@@ -201,6 +224,7 @@ export function emptyInventory(): Inventory {
     contextSources: [],
     credentials: [],
     capabilityDefs: [],
+    aiRuntimes: [],
     callRecords: [],
     errors: [],
   };
