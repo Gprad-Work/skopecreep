@@ -66,6 +66,24 @@ export function renderTerminal(report: AuditReport, opts: TerminalOptions): stri
   }
   L.push("");
 
+  // AI systems (non-agent runtimes / hubs / API clients) detected on the machine.
+  const rts = report.inventory.aiRuntimes;
+  if (rts.length > 0) {
+    L.push(pc.bold("AI systems detected"));
+    const rw = Math.max(...rts.map((r) => r.displayName.length), 8);
+    for (const r of rts) {
+      const flags = [
+        r.tokenFiles?.length ? pc.red("token on disk") : "",
+        r.exposedHost ? pc.red(`exposed:${r.exposedHost}`) : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      L.push(`  ${pc.green("✓")} ${r.displayName.padEnd(rw)}  ${pc.dim(r.kind)}${flags ? `  ${flags}` : ""}`);
+      if (opts.verbose) for (const e of r.evidence) L.push(pc.dim(`      · ${e}`));
+    }
+    L.push("");
+  }
+
   // Findings.
   const counts = countBySeverity(opts.findings);
   const tally = SEVERITY_ORDER.filter((s) => counts[s])

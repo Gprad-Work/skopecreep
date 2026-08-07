@@ -185,6 +185,25 @@ exists to prevent repeating unannounced). SARIF output follows SARIF 2.1.0.
 | `context-base64-blob` | Large embedded base64 payloads in context |
 | `context-external-dep` | Instructions that depend on an external file |
 | `world-writable-config` | Agent config writable by other local users |
+| `ai-runtime-token-at-rest` | Plaintext Hugging Face / API token on disk |
+| `ai-runtime-exposed` | A local model runtime (Ollama, …) listening on a non-loopback address |
+
+### AI systems on the machine
+
+Beyond coding agents, skopecreep recognizes the other AI systems installed on
+the box — read-only, no execution, no network — and inventories them:
+
+- **Local model runtimes**: Ollama, LM Studio, llama.cpp, GPT4All, vLLM, Text
+  Generation WebUI
+- **Model hubs**: Hugging Face
+- **API clients**: DeepSeek, OpenAI, Anthropic, Together, Groq, Mistral
+
+Presence is inventory (shown in `--verbose` and the report's Inventory tab), not
+a finding — an API key in an environment variable is the *recommended* place, so
+it isn't flagged. Only genuine risk becomes a finding: a plaintext token *file*
+on disk (`ai-runtime-token-at-rest`), or a local runtime bound to a non-loopback
+address so its unauthenticated inference API is reachable from the network
+(`ai-runtime-exposed`).
 
 Every finding is also tagged with the [MITRE ATLAS](https://atlas.mitre.org/matrices/ATLAS)
 tactic/technique it enables (e.g. `weak-sandbox` → `AML.T0053` AI Agent Tool
@@ -292,6 +311,8 @@ Want to contribute a collector or a detector? See
 ## Roadmap
 
 - ~~SARIF output + a GitHub Action~~ — shipped (see [CI integration](#ci-integration)).
+- ~~Recognize non-agent AI systems (Ollama, Hugging Face, DeepSeek…)~~ — shipped
+  (see [AI systems on the machine](#ai-systems-on-the-machine)).
 - **Creep detection** — diff the current posture against a previous snapshot
   and flag *new* grants/servers/hooks since the last audit.
 - Call-history analysis (Codex SQLite logs, Claude transcripts) — report which

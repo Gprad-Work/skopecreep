@@ -1,5 +1,6 @@
 /** Collector registry — runs the selected tool collectors into one Inventory. */
 import { ALL_TOOL_IDS, emptyInventory, type Inventory, type ToolId } from "../model.js";
+import { collectAiRuntimes } from "./aiRuntimes.js";
 import { collectClaudeCode } from "./claudeCode.js";
 import { collectCodex } from "./codex.js";
 import { collectCopilot } from "./copilot.js";
@@ -25,6 +26,12 @@ export function collectAll(ctx: CollectorContext, tools?: ToolId[]): Inventory {
     } catch (e) {
       inv.errors.push({ tool: id, message: `collector failed: ${(e as Error).message}` });
     }
+  }
+  // AI-runtime recognition is orthogonal to the agent selection — always run it.
+  try {
+    collectAiRuntimes(ctx, inv);
+  } catch (e) {
+    inv.errors.push({ tool: "generic", message: `ai-runtime collector failed: ${(e as Error).message}` });
   }
   return inv;
 }

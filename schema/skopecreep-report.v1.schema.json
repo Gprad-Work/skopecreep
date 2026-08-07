@@ -27,7 +27,7 @@
     "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
     "inventory": {
       "type": "object",
-      "required": ["tools", "mcpServers", "grants", "hooks", "credentials", "capabilityDefs", "contextSources", "errors"],
+      "required": ["tools", "mcpServers", "grants", "hooks", "credentials", "capabilityDefs", "aiRuntimes", "contextSources", "errors"],
       "properties": {
         "tools": { "type": "array" },
         "mcpServers": { "type": "array" },
@@ -35,6 +35,7 @@
         "hooks": { "type": "array" },
         "credentials": { "type": "array" },
         "capabilityDefs": { "type": "array" },
+        "aiRuntimes": { "type": "array" },
         "contextSources": {
           "type": "array",
           "items": { "type": "object", "not": { "required": ["content"] } }

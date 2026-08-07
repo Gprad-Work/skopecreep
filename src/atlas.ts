@@ -22,6 +22,7 @@ export interface AtlasTechnique {
 }
 
 const TA = {
+  modelAccess: { id: "AML.TA0000", name: "AI Model Access" },
   initialAccess: { id: "AML.TA0004", name: "Initial Access" },
   execution: { id: "AML.TA0005", name: "Execution" },
   persistence: { id: "AML.TA0006", name: "Persistence" },
@@ -64,6 +65,11 @@ export const ATLAS_TECHNIQUES = {
     id: "AML.T0034.002",
     name: "Cost Harvesting: Agentic Resource Consumption",
     tactics: [TA.impact],
+  },
+  "AML.T0040": {
+    id: "AML.T0040",
+    name: "AI Model Inference API Access",
+    tactics: [TA.modelAccess],
   },
   "AML.T0050": {
     id: "AML.T0050",
@@ -116,6 +122,8 @@ export type AtlasTechniqueId = keyof typeof ATLAS_TECHNIQUES;
 
 /** ruleId -> one or more ATLAS technique IDs, most-relevant first. */
 export const RULE_ATLAS_MAP: Record<string, AtlasTechniqueId[]> = {
+  "ai-runtime-token-at-rest": ["AML.T0055"],
+  "ai-runtime-exposed": ["AML.T0040"],
   "secret-at-rest": ["AML.T0055"],
   "secret-in-mcp-env": ["AML.T0055"],
   "secret-in-context": ["AML.T0055", "AML.T0057"],
