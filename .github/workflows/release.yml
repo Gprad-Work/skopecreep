@@ -22,6 +22,14 @@ permissions:
 jobs:
   test:
     uses: ./.github/workflows/ci.yml
+    # ci.yml's dogfood job uploads SARIF, so the reusable call must be allowed
+    # security-events:write. A called workflow can't exceed the caller's grant,
+    # and this workflow's default is contents:read — without this the whole run
+    # fails at startup ("requesting security-events:write, only allowed
+    # contents:read").
+    permissions:
+      contents: read
+      security-events: write
 
   publish:
     needs: test
