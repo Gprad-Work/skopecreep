@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-13
+
 ### Added
 - **AI-system recognition** — beyond coding agents, skopecreep now inventories
   the other AI systems on the machine (read-only, no execution): local model
@@ -31,10 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (world-writable config feeding an auto-run path). Chain findings flow
   through every reporter, `--fail-on`, baselines, and creep diffs like any
   other finding; JSON/SARIF carry the member ids (`related` / `chainMembers`).
-
-## [0.3.0] - 2026-07-13
-
-### Added
 - **Creep detection** — `--write-snapshot <file>` records the machine's
   posture (finding ids + every granted capability: permission rules, MCP
   servers, hooks, credentials); `--diff <snapshot>` reports exactly what's
